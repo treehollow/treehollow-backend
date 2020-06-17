@@ -54,7 +54,7 @@ func initDb() {
 	checkCommentNameOut, err = db.Prepare("SELECT name FROM comments WHERE pid=? AND email_hash=(SELECT email_hash FROM user_info WHERE token=?)")
 	fatalErrorHandle(&err, "error preparing comments sql query")
 
-	getCommentCountOut, err = db.Prepare("SELECT count( DISTINCT(email_hash) ) FROM comments WHERE pid=?")
+	getCommentCountOut, err = db.Prepare("SELECT count( DISTINCT(email_hash) ) FROM comments WHERE pid=? AND email_hash != ?")
 	fatalErrorHandle(&err, "error preparing comments sql query")
 
 	getOnePostOut, err = db.Prepare("SELECT email_hash, text, timestamp, tag, type, file_path, likenum, replynum FROM posts WHERE pid=?")
@@ -194,7 +194,7 @@ func checkCode(hashedUser string, code string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return correctCode == code && now-timestamp < 300, nil
+	return correctCode == code && now-timestamp < 900, nil
 }
 
 func saveToken(token string, hashedUser string) error {
@@ -215,9 +215,9 @@ func getMaxPid() (int, error) {
 	return int(pid), err
 }
 
-func getCommentCount(pid int) (int, error) {
+func getCommentCount(pid int, dzEmailHash string) (int, error) {
 	var rtn int64
-	err := getCommentCountOut.QueryRow(pid).Scan(&rtn)
+	err := getCommentCountOut.QueryRow(pid, dzEmailHash).Scan(&rtn)
 	return int(rtn), err
 }
 

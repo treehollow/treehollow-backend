@@ -88,7 +88,7 @@ func doComment(c *gin.Context) {
 		name, err = getCommentNameByToken(token, pid)
 		if err != nil { // token is not in comments
 			var i int
-			i, err = getCommentCount(pid)
+			i, err = getCommentCount(pid, dzEmailHash)
 			if err != nil {
 				c.JSON(http.StatusOK, gin.H{
 					"code": 1,

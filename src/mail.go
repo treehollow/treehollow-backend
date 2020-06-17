@@ -14,7 +14,7 @@ func sendMail(code string, recipient string) (string, error) {
 	m := mg.NewMessage(
 		"T大树洞 <noreply@"+domain+">",
 		"【T大树洞验证码】"+code,
-		"您好：\n\n欢迎您注册T大树洞！\n\n"+code+"\n这是您注册T大树洞的验证码，有效时间5分钟。\n",
+		"您好：\n\n欢迎您注册T大树洞！\n\n"+code+"\n这是您注册T大树洞的验证码，有效时间15分钟。\n",
 		recipient,
 	)
 
