@@ -13,3 +13,10 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+#######################################################################
+.idea/
+*.key
+config.json
+log.txt
+TODO.md
