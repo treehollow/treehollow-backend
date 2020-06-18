@@ -117,13 +117,34 @@ func getList(c *gin.Context) {
 		})
 		return
 	} else {
-		c.JSON(http.StatusOK, gin.H{
-			"code":      0,
-			"data":      IfThenElse(data != nil, data, []string{}),
-			"timestamp": getTimeStamp(),
-			"count":     IfThenElse(data != nil, len(data), 0),
-		})
-		return
+		pinnedPids := getPinnedPids()
+		if len(pinnedPids) > 0 && p == 1 {
+			pinnedData, err3 := getPostsByPidList(pinnedPids)
+			if err3 != nil {
+				log.Printf("get pinned post failed: %s\n", err2)
+				c.JSON(http.StatusOK, gin.H{
+					"code": 1,
+					"msg":  "数据库读取失败，请联系管理员",
+				})
+				return
+			} else {
+				rtnData := append(pinnedData, data...)
+				c.JSON(http.StatusOK, gin.H{
+					"code":      0,
+					"data":      rtnData,
+					"timestamp": getTimeStamp(),
+					"count":     IfThenElse(data != nil, len(rtnData), 0),
+				})
+			}
+		} else {
+			c.JSON(http.StatusOK, gin.H{
+				"code":      0,
+				"data":      IfThenElse(data != nil, data, []string{}),
+				"timestamp": getTimeStamp(),
+				"count":     IfThenElse(data != nil, len(data), 0),
+			})
+			return
+		}
 	}
 }
 
@@ -177,6 +198,7 @@ func getAttention(c *gin.Context) {
 		})
 		return
 	}
+
 	pids := hexToIntSlice(attentions)
 	data, err2 := getPostsByPidList(pids)
 	if err2 != nil {

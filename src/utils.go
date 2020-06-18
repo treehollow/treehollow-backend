@@ -6,7 +6,9 @@ import (
 	"encoding/base32"
 	"encoding/hex"
 	"fmt"
+	"github.com/spf13/viper"
 	"math/big"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -122,4 +124,20 @@ func SplitToString(a []int, sep string) string {
 		b[i] = strconv.Itoa(v)
 	}
 	return strings.Join(b, sep)
+}
+
+func getPinnedPids() []int {
+	reg := regexp.MustCompile(`[ ,]`)
+	s := viper.GetString("pinned_pids")
+	var rtn []int
+	for _, str := range reg.Split(s, -1) {
+		if str != "" {
+			i, err := strconv.Atoi(str)
+			if err != nil {
+				fatalErrorHandle(&err, "pinned_pids Atoi error:"+str)
+			}
+			rtn = append(rtn, i)
+		}
+	}
+	return rtn
 }

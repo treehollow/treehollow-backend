@@ -1,6 +1,7 @@
 {
   "images_path": "/tmp/",
   "sql_source": "username:pass@tcp(127.0.0.1:3306)/database",
+  "pinned_pids": "1,23",
   "mailgun_key": "xxx",
   "mailgun_domain": "mail.thuhole.tech",
   "is_debug": true
