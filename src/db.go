@@ -105,7 +105,7 @@ func getPostsByPidList(pids []int) ([]interface{}, error) {
 			"timestamp": timestamp,
 			"reply":     replynum,
 			"likenum":   likenum,
-			"url":       "",
+			"url":       filePath,
 			"tag":       IfThenElse(len(tag) != 0, tag, nil),
 		})
 	}
@@ -137,7 +137,7 @@ func getSavedPosts(pidMin int, pidMax int) ([]interface{}, error) {
 			"timestamp": timestamp,
 			"reply":     replynum,
 			"likenum":   likenum,
-			"url":       "",
+			"url":       filePath,
 			"tag":       IfThenElse(len(tag) != 0, tag, nil),
 		})
 	}

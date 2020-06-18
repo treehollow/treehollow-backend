@@ -1,7 +1,10 @@
 package main
 
 import (
+	"encoding/base64"
 	"github.com/gin-gonic/gin"
+	"github.com/spf13/viper"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
@@ -11,20 +14,35 @@ func doPost(c *gin.Context) {
 	text := c.PostForm("text")
 	typ := c.PostForm("type")
 	token := c.PostForm("user_token")
+	img := c.PostForm("data")
 	if len(text) > postMaxLength {
 		c.JSON(http.StatusOK, gin.H{
 			"code": 1,
 			"msg":  "字数过长！字数限制为" + strconv.Itoa(postMaxLength) + "字。",
 		})
 		return
-	} else if typ != "text" {
+	} else if typ != "text" && typ != "image" {
 		c.JSON(http.StatusOK, gin.H{
 			"code": 1,
-			"msg":  "额，这个功能还在开发。。。",
+			"msg":  "未知类型的树洞",
+		})
+		return
+	} else if int(float64(len(img))/Base64Rate) > imgMaxLength {
+		c.JSON(http.StatusOK, gin.H{
+			"code": 1,
+			"msg":  "图片大小超出限制！",
 		})
 		return
 	}
-	pid, err := savePost(token, text, "", typ, "")
+
+	var pid int
+	var err error
+	if typ == "image" {
+		pid, err = savePost(token, text, "", typ, strconv.Itoa(pid)+".jepg")
+	} else {
+		pid, err = savePost(token, text, "", typ, "")
+	}
+
 	if err != nil {
 		log.Printf("error savePost! %s\n", err)
 		c.JSON(http.StatusOK, gin.H{
@@ -33,6 +51,24 @@ func doPost(c *gin.Context) {
 		})
 		return
 	} else {
+		if typ == "image" {
+			sDec, err2 := base64.StdEncoding.DecodeString(img)
+			if err2 != nil {
+				c.JSON(http.StatusOK, gin.H{
+					"code": 1,
+					"msg":  "发送失败，图片数据不合法",
+				})
+				return
+			}
+			err3 := ioutil.WriteFile(viper.GetString("images_path")+strconv.Itoa(pid)+".jpeg", sDec, 0644)
+			if err3 != nil {
+				c.JSON(http.StatusOK, gin.H{
+					"code": 1,
+					"msg":  "图片写入失败，请联系管理员",
+				})
+				return
+			}
+		}
 		c.JSON(http.StatusOK, gin.H{
 			"code": 0,
 			"data": pid,

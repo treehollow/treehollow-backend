@@ -16,9 +16,9 @@ func getOne(c *gin.Context) {
 		})
 		return
 	}
-	var text, tag, typ string
+	var text, tag, typ, filePath string
 	var timestamp, likenum, replynum int
-	_, text, timestamp, tag, typ, _, likenum, replynum, err = getOnePost(pid)
+	_, text, timestamp, tag, typ, filePath, likenum, replynum, err = getOnePost(pid)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code": 1,
@@ -35,7 +35,7 @@ func getOne(c *gin.Context) {
 				"timestamp": timestamp,
 				"reply":     replynum,
 				"likenum":   likenum,
-				"url":       "",
+				"url":       filePath,
 				"tag":       IfThenElse(len(tag) != 0, tag, nil),
 			},
 			"timestamp": getTimeStamp(),

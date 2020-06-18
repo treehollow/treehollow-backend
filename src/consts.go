@@ -4,6 +4,9 @@ package main
 const pageSize = 30
 const postMaxLength = 10000
 const commentMaxLength = 10000
+const imgMaxLength = 2000000
+const Base64Rate = 1.33333333
+
 const listenAddress = "127.0.0.1:3001"
 const logFile = "log.txt"
 
