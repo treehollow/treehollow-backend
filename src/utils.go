@@ -15,12 +15,12 @@ import (
 )
 
 func genCode() string {
-	nBig, err := rand.Int(rand.Reader, big.NewInt(1000000))
+	nBig, err := rand.Int(rand.Reader, big.NewInt(100000000))
 	if err != nil {
 		panic(err)
 	}
 	n := nBig.Int64()
-	return fmt.Sprintf("%06d", n)
+	return fmt.Sprintf("%08d", n)
 }
 
 func genToken() string {

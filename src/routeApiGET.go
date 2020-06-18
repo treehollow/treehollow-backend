@@ -108,7 +108,7 @@ func getList(c *gin.Context) {
 	pidRight := maxPid - (p-1)*pageSize
 	data, err2 := getSavedPosts(pidLeft, pidRight)
 	if err2 != nil {
-		log.Printf("getSavedPosts failed: %s\n", err2)
+		log.Printf("getSavedPosts failed while getList: %s\n", err2)
 		c.JSON(http.StatusOK, gin.H{
 			"code": 1,
 			"msg":  "数据库读取失败，请联系管理员",
@@ -167,7 +167,7 @@ func searchPost(c *gin.Context) {
 
 	data, err2 := searchSavedPosts(strings.ReplaceAll(keywords, " ", " +"), (page-1)*pageSize, pageSize)
 	if err2 != nil {
-		log.Printf("getSavedPosts failed: %s\n", err2)
+		log.Printf("searchSavedPosts failed while searchList: %s\n", err2)
 		c.JSON(http.StatusOK, gin.H{
 			"code": 1,
 			"msg":  "数据库读取失败，请联系管理员",
@@ -200,7 +200,7 @@ func getAttention(c *gin.Context) {
 	pids := hexToIntSlice(attentions)
 	data, err2 := getPostsByPidList(pids)
 	if err2 != nil {
-		log.Printf("getSavedPosts failed: %s\n", err2)
+		log.Printf("getPostsByPidList failed while getAttention: %s\n", err2)
 		c.JSON(http.StatusOK, gin.H{
 			"code": 1,
 			"msg":  "数据库读取失败，请联系管理员",

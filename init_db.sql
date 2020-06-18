@@ -10,9 +10,9 @@ create table user_info
 
 create table verification_codes
 (
-    email_hash CHAR(64) NOT NULL,
-    timestamp  INT      NOT NULL,
-    code       INT      NOT NULL,
+    email_hash CHAR(64)    NOT NULL,
+    timestamp  INT         NOT NULL,
+    code       VARCHAR(20) NOT NULL,
     PRIMARY KEY (email_hash)
 ) DEFAULT CHARSET = ascii;
 

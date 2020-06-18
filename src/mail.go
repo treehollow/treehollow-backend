@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"github.com/mailgun/mailgun-go"
 	"github.com/spf13/viper"
+	"gopkg.in/gomail.v2"
+	"html/template"
 	"time"
 )
 
@@ -25,4 +28,34 @@ func sendMail(code string, recipient string) (string, error) {
 
 	_, id, err := mg.Send(ctx, m)
 	return id, err
+}
+
+func sendMail2(code string, recipient string) error {
+	m := gomail.NewMessage()
+	m.SetHeader("From", viper.GetString("smtp_username"))
+	m.SetHeader("To", recipient)
+	m.SetHeader("Subject", "【T大树洞】验证码")
+
+	templateData := struct {
+		Code string
+	}{
+		Code: code,
+	}
+
+	t, err := template.ParseFiles("send_code.html")
+	if err != nil {
+		return err
+	}
+	buf := new(bytes.Buffer)
+	if err = t.Execute(buf, templateData); err != nil {
+		return err
+	}
+	m.SetBody("text/html", buf.String())
+	m.AddAlternative("text/plain", "您好：\n\n欢迎您注册T大树洞！\n\n"+code+"\n这是您注册T大树洞的验证码，有效时间30分钟。\n")
+	d := gomail.NewDialer(viper.GetString("smtp_host"), 465, viper.GetString("smtp_username"), viper.GetString("smtp_password"))
+
+	if err := d.DialAndSend(m); err != nil {
+		return err
+	}
+	return nil
 }

@@ -32,7 +32,7 @@ func sendCode(c *gin.Context) {
 
 	_, err = sendMail(code, user)
 	if err != nil {
-		log.Printf("send mail failed: %s\n", err)
+		log.Printf("send mail to %s failed: %s\n", user, err)
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"msg":     "验证码邮件发送失败",
