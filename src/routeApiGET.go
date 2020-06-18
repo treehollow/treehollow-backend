@@ -198,6 +198,15 @@ func getAttention(c *gin.Context) {
 	}
 
 	pids := hexToIntSlice(attentions)
+	if len(pids) == 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"code":      0,
+			"data":      []string{},
+			"timestamp": getTimeStamp(),
+			"count":     0,
+		})
+		return
+	}
 	data, err2 := getPostsByPidList(pids)
 	if err2 != nil {
 		log.Printf("getPostsByPidList failed while getAttention: %s\n", err2)
