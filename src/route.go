@@ -42,7 +42,7 @@ func sendCode(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
-		"msg":     "验证码发送成功，请记得查看垃圾邮件。由于未知bug，验证码可能需要较长时间才能受到。",
+		"msg":     "验证码发送成功，请记得查看垃圾邮件。由于未知bug，验证码可能需要较长时间才能收到。",
 	})
 }
 
