@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 func getOne(c *gin.Context) {
@@ -126,6 +127,44 @@ func getList(c *gin.Context) {
 	}
 }
 
+func searchPost(c *gin.Context) {
+	page, err := strconv.Atoi(c.Query("page"))
+	if err != nil || page > searchMaxPage {
+		c.JSON(http.StatusOK, gin.H{
+			"code": 1,
+			"msg":  "获取失败，参数page不合法",
+		})
+		return
+	}
+	pageSize, err := strconv.Atoi(c.Query("pagesize"))
+	if err != nil || pageSize > searchMaxPageSize {
+		c.JSON(http.StatusOK, gin.H{
+			"code": 1,
+			"msg":  "获取失败，参数pagesize不合法",
+		})
+		return
+	}
+	keywords := c.Query("keywords")
+
+	data, err2 := searchSavedPosts(strings.ReplaceAll(keywords, " ", " +"), (page-1)*pageSize, pageSize)
+	if err2 != nil {
+		log.Printf("getSavedPosts failed: %s\n", err2)
+		c.JSON(http.StatusOK, gin.H{
+			"code": 1,
+			"msg":  "数据库读取失败，请联系管理员",
+		})
+		return
+	} else {
+		c.JSON(http.StatusOK, gin.H{
+			"code":      0,
+			"data":      IfThenElse(data != nil, data, []string{}),
+			"timestamp": getTimeStamp(),
+			"count":     IfThenElse(data != nil, len(data), 0),
+		})
+		return
+	}
+}
+
 func getAttention(c *gin.Context) {
 	token := c.Query("user_token")
 	attentions, _, err := getInfoByToken(token)
@@ -177,10 +216,7 @@ func apiGet(c *gin.Context) {
 		getAttention(c)
 		return
 	case "search":
-		c.JSON(http.StatusOK, gin.H{
-			"code": 1,
-			"msg":  "搜索功能将在树洞条数达到几百条后开启！",
-		})
+		searchPost(c)
 		return
 	default:
 		c.AbortWithStatus(403)

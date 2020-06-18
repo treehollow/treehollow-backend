@@ -20,7 +20,7 @@ create table posts
 (
     pid        INT            NOT NULL AUTO_INCREMENT,
     email_hash CHAR(64)       NOT NULL,
-    text       VARCHAR(16000) NOT NULL,
+    text       VARCHAR(10000) NOT NULL,
     timestamp  INT            NOT NULL,
     tag        VARCHAR(60)    NOT NULL,
     type       VARCHAR(60)    NOT NULL,
@@ -35,7 +35,7 @@ create table comments
     cid        INT            NOT NULL AUTO_INCREMENT,
     pid        INT            NOT NULL,
     email_hash CHAR(64)       NOT NULL,
-    text       VARCHAR(16000) NOT NULL,
+    text       VARCHAR(10000) NOT NULL,
     tag        VARCHAR(60)    NOT NULL,
     timestamp  INT            NOT NULL,
     name       VARCHAR(60)    NOT NULL,

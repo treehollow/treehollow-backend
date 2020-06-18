@@ -24,6 +24,7 @@ var minusOneAttentionIns *sql.Stmt
 var getOnePostOut *sql.Stmt
 var getCommentsOut *sql.Stmt
 var getPostsOut *sql.Stmt
+var searchOut *sql.Stmt
 
 func initDb() {
 	var err error
@@ -75,6 +76,9 @@ func initDb() {
 	getPostsOut, err = db.Prepare("SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum FROM posts WHERE pid>? AND pid<=? ORDER BY pid DESC")
 	fatalErrorHandle(&err, "error preparing posts sql query")
 
+	searchOut, err = db.Prepare("SELECT * FROM posts WHERE match(text) against(? IN BOOLEAN MODE) ORDER BY pid DESC LIMIT ?, ?")
+	fatalErrorHandle(&err, "error preparing posts sql query")
+
 }
 
 func getOnePost(pid int) (string, string, int, string, string, string, int, int, error) {
@@ -119,6 +123,38 @@ func getPostsByPidList(pids []int) ([]interface{}, error) {
 func getSavedPosts(pidMin int, pidMax int) ([]interface{}, error) {
 	var rtn []interface{}
 	rows, err := getPostsOut.Query(pidMin, pidMax)
+	if err != nil {
+		return nil, err
+	}
+
+	var emailHash, text, tag, typ, filePath string
+	var timestamp, pid, likenum, replynum int
+	for rows.Next() {
+		err := rows.Scan(&pid, &emailHash, &text, &timestamp, &tag, &typ, &filePath, &likenum, &replynum)
+		if err != nil {
+			log.Fatal(err)
+		}
+		rtn = append(rtn, gin.H{
+			"pid":       pid,
+			"text":      text,
+			"type":      typ,
+			"timestamp": timestamp,
+			"reply":     replynum,
+			"likenum":   likenum,
+			"url":       filePath,
+			"tag":       IfThenElse(len(tag) != 0, tag, nil),
+		})
+	}
+	err = rows.Err()
+	if err != nil {
+		return nil, err
+	}
+	return rtn, nil
+}
+
+func searchSavedPosts(str string, limitMin int, searchPageSize int) ([]interface{}, error) {
+	var rtn []interface{}
+	rows, err := searchOut.Query(str, limitMin, searchPageSize)
 	if err != nil {
 		return nil, err
 	}
