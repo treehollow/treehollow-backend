@@ -35,14 +35,14 @@ func sendCode(c *gin.Context) {
 		log.Printf("send mail failed: %s\n", err)
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"msg":     "验证码发送失败",
+			"msg":     "验证码邮件发送失败",
 		})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
-		"msg":     "验证码发送成功",
+		"msg":     "验证码发送成功，请记得查看垃圾邮件。由于未知bug，验证码可能需要较长时间才能受到。",
 	})
 }
 

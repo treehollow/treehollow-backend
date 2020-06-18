@@ -63,8 +63,6 @@ func getComment(c *gin.Context) {
 			if _, ok := contains(pids, pid); ok {
 				attention = 1
 			}
-		} else {
-			log.Printf("getInfoByToken failed: %s\n", err)
 		}
 	}
 	data, err2 := getSavedComments(pid)
