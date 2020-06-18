@@ -37,8 +37,10 @@ func doPost(c *gin.Context) {
 
 	var pid int
 	var err error
+	var imgPath string
 	if typ == "image" {
-		pid, err = savePost(token, text, "", typ, strconv.Itoa(pid)+".jepg")
+		imgPath = genToken()
+		pid, err = savePost(token, text, "", typ, imgPath+".jepg")
 	} else {
 		pid, err = savePost(token, text, "", typ, "")
 	}
@@ -60,7 +62,7 @@ func doPost(c *gin.Context) {
 				})
 				return
 			}
-			err3 := ioutil.WriteFile(viper.GetString("images_path")+strconv.Itoa(pid)+".jpeg", sDec, 0644)
+			err3 := ioutil.WriteFile(viper.GetString("images_path")+imgPath+".jpeg", sDec, 0644)
 			if err3 != nil {
 				c.JSON(http.StatusOK, gin.H{
 					"code": 1,
