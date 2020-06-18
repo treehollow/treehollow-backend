@@ -40,7 +40,7 @@ func doPost(c *gin.Context) {
 	var imgPath string
 	if typ == "image" {
 		imgPath = genToken()
-		pid, err = savePost(token, text, "", typ, imgPath+".jepg")
+		pid, err = savePost(token, text, "", typ, imgPath+".jpeg")
 	} else {
 		pid, err = savePost(token, text, "", typ, "")
 	}
