@@ -129,21 +129,24 @@ func getSavedPosts(pidMin int, pidMax int) ([]interface{}, error) {
 
 	var emailHash, text, tag, typ, filePath string
 	var timestamp, pid, likenum, replynum int
+	pinnedPids := getPinnedPids()
 	for rows.Next() {
 		err := rows.Scan(&pid, &emailHash, &text, &timestamp, &tag, &typ, &filePath, &likenum, &replynum)
 		if err != nil {
 			log.Fatal(err)
 		}
-		rtn = append(rtn, gin.H{
-			"pid":       pid,
-			"text":      text,
-			"type":      typ,
-			"timestamp": timestamp,
-			"reply":     replynum,
-			"likenum":   likenum,
-			"url":       filePath,
-			"tag":       IfThenElse(len(tag) != 0, tag, nil),
-		})
+		if _, ok := contains(pinnedPids, pid); !ok {
+			rtn = append(rtn, gin.H{
+				"pid":       pid,
+				"text":      text,
+				"type":      typ,
+				"timestamp": timestamp,
+				"reply":     replynum,
+				"likenum":   likenum,
+				"url":       filePath,
+				"tag":       IfThenElse(len(tag) != 0, tag, nil),
+			})
+		}
 	}
 	err = rows.Err()
 	if err != nil {
