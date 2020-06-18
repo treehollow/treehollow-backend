@@ -17,7 +17,7 @@ func sendMail(code string, recipient string) (string, error) {
 	m := mg.NewMessage(
 		"T大树洞 <noreply@"+domain+">",
 		"【T大树洞】验证码",
-		"您好：\n\n欢迎您注册T大树洞！\n\n"+code+"\n这是您注册T大树洞的验证码，有效时间30分钟。\n",
+		"您好：\n\n欢迎您注册T大树洞！\n\n"+code+"\n这是您注册T大树洞的验证码，有效时间12小时。\n",
 		recipient,
 	)
 	m.SetTemplate("code")
@@ -51,7 +51,7 @@ func sendMail2(code string, recipient string) error {
 		return err
 	}
 	m.SetBody("text/html", buf.String())
-	m.AddAlternative("text/plain", "您好：\n\n欢迎您注册T大树洞！\n\n"+code+"\n这是您注册T大树洞的验证码，有效时间30分钟。\n")
+	m.AddAlternative("text/plain", "您好：\n\n欢迎您注册T大树洞！\n\n"+code+"\n这是您注册T大树洞的验证码，有效时间12小时。\n")
 	d := gomail.NewDialer(viper.GetString("smtp_host"), 465, viper.GetString("smtp_username"), viper.GetString("smtp_password"))
 
 	if err := d.DialAndSend(m); err != nil {

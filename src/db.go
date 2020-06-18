@@ -233,7 +233,7 @@ func checkCode(hashedUser string, code string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return correctCode == code && now-timestamp < 1800, nil
+	return correctCode == code && now-timestamp < 43200, nil
 }
 
 func saveToken(token string, hashedUser string) error {

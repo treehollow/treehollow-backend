@@ -42,7 +42,7 @@ func sendCode(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
-		"msg":     "验证码发送成功，请记得查看垃圾邮件。由于未知bug，验证码可能需要较长时间才能收到。",
+		"msg":     "验证码发送成功，有效期12小时，请记得查看垃圾邮件。由于未知bug，验证码可能需要较长时间才能收到。",
 	})
 }
 
@@ -57,6 +57,7 @@ func login(c *gin.Context) {
 		log.Printf("check code failed: %s\n", err)
 	}
 	if !success {
+		log.Printf("验证码无效或过期: %s, %s\n", user, code)
 		c.JSON(http.StatusOK, gin.H{
 			"code": 1,
 			"msg":  "验证码无效或过期",
