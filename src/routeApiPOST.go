@@ -174,6 +174,12 @@ func apiPost(c *gin.Context) {
 	case "attention":
 		doAttention(c)
 		return
+	case "report":
+		c.JSON(http.StatusOK, gin.H{
+			"code": 1,
+			"msg":  "额，这个功能还在开发。。。",
+		})
+		return
 	default:
 		c.AbortWithStatus(403)
 	}

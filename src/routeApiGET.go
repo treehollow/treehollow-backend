@@ -176,6 +176,12 @@ func apiGet(c *gin.Context) {
 	case "getattention":
 		getAttention(c)
 		return
+	case "search":
+		c.JSON(http.StatusOK, gin.H{
+			"code": 1,
+			"msg":  "搜索功能将在树洞条数达到几百条后开启！",
+		})
+		return
 	default:
 		c.AbortWithStatus(403)
 	}

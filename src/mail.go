@@ -13,10 +13,12 @@ func sendMail(code string, recipient string) (string, error) {
 	mg := mailgun.NewMailgun(domain, apiKey)
 	m := mg.NewMessage(
 		"T大树洞 <noreply@"+domain+">",
-		"【T大树洞验证码】"+code,
+		"【T大树洞】验证码",
 		"您好：\n\n欢迎您注册T大树洞！\n\n"+code+"\n这是您注册T大树洞的验证码，有效时间15分钟。\n",
 		recipient,
 	)
+	m.SetTemplate("code")
+	_ = m.AddVariable("code", code)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
