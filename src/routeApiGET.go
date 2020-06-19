@@ -229,8 +229,6 @@ func getAttention(c *gin.Context) {
 func apiGet(c *gin.Context) {
 	action := c.Query("action")
 
-	c.Header("Access-Control-Allow-Origin", "*")
-	c.Header("Access-Control-Allow-Headers", "Access-Control-Allow-Origin,Content-Type,Date,Content-Length")
 	switch action {
 	case "getone":
 		getOne(c)

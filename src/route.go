@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
@@ -8,8 +9,6 @@ import (
 )
 
 func sendCode(c *gin.Context) {
-	c.Header("Access-Control-Allow-Origin", "*")
-	c.Header("Access-Control-Allow-Headers", "Access-Control-Allow-Origin,Content-Type,Date,Content-Length")
 	code := genCode()
 	user := c.Query("user")
 	if !(strings.HasSuffix(user, "pku.edu.cn") || strings.HasSuffix(user, "mails.tsinghua.edu.cn")) {
@@ -47,8 +46,6 @@ func sendCode(c *gin.Context) {
 }
 
 func login(c *gin.Context) {
-	c.Header("Access-Control-Allow-Origin", "*")
-	c.Header("Access-Control-Allow-Headers", "Access-Control-Allow-Origin,Content-Type,Date,Content-Length")
 	user := c.Query("user")
 	code := c.Query("valid_code")
 	hashedUser := hashEmail(user)
@@ -84,8 +81,6 @@ func login(c *gin.Context) {
 
 func systemMsg(c *gin.Context) {
 	c.Header("Content-Type", "application/json; charset=utf-8")
-	c.Header("Access-Control-Allow-Origin", "*")
-	c.Header("Access-Control-Allow-Headers", "Access-Control-Allow-Origin,Content-Type,Date,Content-Length")
 	//TODO: implement this
 	token := c.Query("user_token")
 	_, _, err := getInfoByToken(token)
@@ -97,20 +92,21 @@ func systemMsg(c *gin.Context) {
 	}
 }
 
-func optionsDebug(c *gin.Context) {
-	c.Header("Content-Type", "application/json; charset=utf-8")
-	c.Header("Access-Control-Allow-Origin", "*")
-	c.Header("Access-Control-Allow-Headers", "Access-Control-Allow-Origin,Content-Type,Date,Content-Length")
-	c.String(http.StatusOK, `{"test": "test"}`)
-}
+//func optionsDebug(c *gin.Context) {
+//	c.Header("Content-Type", "application/json; charset=utf-8")
+//	c.Header("Access-Control-Allow-Origin", "*")
+//	c.Header("Access-Control-Allow-Headers", "Access-Control-Allow-Origin,Content-Type,Date,Content-Length")
+//	c.String(http.StatusOK, `{"test": "test"}`)
+//}
 
 func listenHttp() {
 	r := gin.Default()
-	//if viper.GetBool("is_debug") {
-	r.OPTIONS("/api_xmcp/login/send_code", optionsDebug) // OPTIONS method for bypassing CORS
-	r.OPTIONS("/api_xmcp/login/login", optionsDebug)
-	r.OPTIONS("/services/thuhole/api.php", optionsDebug)
-	//}
+	r.Use(cors.Default())
+	////if viper.GetBool("is_debug") {
+	//r.OPTIONS("/api_xmcp/login/send_code", optionsDebug) // OPTIONS method for bypassing CORS
+	//r.OPTIONS("/api_xmcp/login/login", optionsDebug)
+	//r.OPTIONS("/services/thuhole/api.php", optionsDebug)
+	////}
 	r.POST("/api_xmcp/login/send_code", sendCode)
 	r.POST("/api_xmcp/login/login", login)
 	r.GET("/api_xmcp/hole/system_msg", systemMsg)
