@@ -11,7 +11,7 @@ import (
 func sendCode(c *gin.Context) {
 	code := genCode()
 	user := c.Query("user")
-	if !(strings.HasSuffix(user, "@mails.tsinghua.edu.cn")) {
+	if !(strings.HasSuffix(user, "@mails.tsinghua.edu.cn")) || !checkEmail(user) {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"msg":     "很抱歉，您的邮箱无法注册T大树洞。目前只有@mails.tsinghua.edu.cn的邮箱开放注册。",

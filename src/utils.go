@@ -141,3 +141,10 @@ func getPinnedPids() []int {
 	}
 	return rtn
 }
+
+func checkEmail(email string) bool {
+	f := func(r rune) bool {
+		return (r < 'A' || r > 'Z') && (r < 'a' || r > 'z') && (r < '0' || r > '9') && (r != '-') && (r != '.') && (r != '@')
+	}
+	return strings.IndexFunc(email, f) == -1
+}
