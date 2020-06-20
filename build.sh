@@ -1,4 +1,4 @@
-cd src || echo "failed cd";exit
+cd src || exit
 go build .
 echo "build done"
 rm -rf ../run
