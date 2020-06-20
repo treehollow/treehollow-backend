@@ -143,8 +143,7 @@ func getPinnedPids() []int {
 }
 
 func checkEmail(email string) bool {
-	f := func(r rune) bool {
-		return (r < 'A' || r > 'Z') && (r < 'a' || r > 'z') && (r < '0' || r > '9') && (r != '-') && (r != '.') && (r != '@')
-	}
-	return strings.IndexFunc(email, f) == -1
+	// REF: https://html.spec.whatwg.org/multipage/input.html#valid-e-mail-address
+	var emailRegexp = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
+	return emailRegexp.MatchString(email)
 }
