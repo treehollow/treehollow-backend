@@ -15,9 +15,8 @@ func apiFallBack(c *gin.Context) {
 
 func serviceFallBack(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
-		"code":   1,
-		"msg":    "系统正在维护升级，请稍后重试...",
-		"result": []string{},
+		"code": 1,
+		"msg":  "系统正在维护升级，请稍后重试...",
 	})
 	return
 }

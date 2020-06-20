@@ -25,10 +25,10 @@ func sendCode(c *gin.Context) {
 	if err != nil {
 		log.Printf("checkCode failed when sendCode: %s\n", err)
 	}
-	if now-timeStamp < 1200 {
+	if now-timeStamp < 600 {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"msg":     "请不要重复发送邮件。",
+			"msg":     "请不要短时间内重复发送邮件。",
 		})
 		return
 	}
