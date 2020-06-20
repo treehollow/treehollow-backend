@@ -225,15 +225,14 @@ func saveCode(user string, code string) error {
 	return err
 }
 
-func checkCode(hashedUser string, code string) (bool, error) {
-	now := getTimeStamp()
+func checkCode(hashedUser string) (string, int64, error) {
 	var timestamp int64
 	var correctCode string
 	err := checkCodeOut.QueryRow(hashedUser).Scan(&timestamp, &correctCode)
 	if err != nil {
-		return false, err
+		return "", -1, err
 	}
-	return correctCode == code && now-timestamp < 43200, nil
+	return correctCode, timestamp, nil
 }
 
 func saveToken(token string, hashedUser string) error {

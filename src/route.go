@@ -11,20 +11,24 @@ import (
 func sendCode(c *gin.Context) {
 	code := genCode()
 	user := c.Query("user")
-	if !(strings.HasSuffix(user, "pku.edu.cn") || strings.HasSuffix(user, "mails.tsinghua.edu.cn")) {
+	if !(strings.HasSuffix(user, "@mails.tsinghua.edu.cn")) {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"msg":     "很抱歉，您的邮箱无法注册T大树洞",
+			"msg":     "很抱歉，您的邮箱无法注册T大树洞。目前只有@mails.tsinghua.edu.cn的邮箱开放注册。",
 		})
 		return
 	}
 
-	err := saveCode(user, code)
+	hashedUser := hashEmail(user)
+	now := getTimeStamp()
+	_, timeStamp, err := checkCode(hashedUser)
 	if err != nil {
-		log.Printf("save code failed: %s\n", err)
+		log.Printf("checkCode failed when sendCode: %s\n", err)
+	}
+	if now-timeStamp < 1200 {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"msg":     "数据库写入失败，请联系管理员",
+			"msg":     "请不要重复发送邮件。",
 		})
 		return
 	}
@@ -39,9 +43,19 @@ func sendCode(c *gin.Context) {
 		return
 	}
 
+	err = saveCode(user, code)
+	if err != nil {
+		log.Printf("save code failed: %s\n", err)
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"msg":     "数据库写入失败，请联系管理员",
+		})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
-		"msg":     "验证码发送成功，有效期【12小时】。由于清华邮箱的固有问题，验证码可能需要较长时间才能收到.请记得查看垃圾邮件。",
+		"msg":     "验证码发送成功，有效期【12小时】。由于清华邮箱的审查系统，验证码可能需要较长时间才能收到，不要多次发送验证码。请记得查看垃圾邮件。",
 	})
 }
 
@@ -49,11 +63,12 @@ func login(c *gin.Context) {
 	user := c.Query("user")
 	code := c.Query("valid_code")
 	hashedUser := hashEmail(user)
-	success, err := checkCode(hashedUser, code)
+	now := getTimeStamp()
+	correctCode, timeStamp, err := checkCode(hashedUser)
 	if err != nil {
 		log.Printf("check code failed: %s\n", err)
 	}
-	if !success {
+	if correctCode != code || now-timeStamp > 43200 {
 		log.Printf("验证码无效或过期: %s, %s\n", user, code)
 		c.JSON(http.StatusOK, gin.H{
 			"code": 1,

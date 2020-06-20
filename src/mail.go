@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/viper"
 	"gopkg.in/gomail.v2"
 	"html/template"
+	"math/rand"
 	"time"
 )
 
@@ -14,8 +15,13 @@ func sendMail(code string, recipient string) (string, error) {
 	apiKey := viper.GetString("mailgun_key")
 	domain := viper.GetString("mailgun_domain")
 	mg := mailgun.NewMailgun(domain, apiKey)
+
+	s1 := rand.NewSource(time.Now().UnixNano())
+	r1 := rand.New(s1)
+	sendName := getCommenterName(r1.Intn(26) + 1)
+
 	m := mg.NewMessage(
-		"T大树洞 <noreply@"+domain+">",
+		"T大树洞"+" <"+sendName+"@"+sendName+".thuhole.com>",
 		"【T大树洞】验证码",
 		"您好：\n\n欢迎您注册T大树洞！\n\n"+code+"\n这是您注册T大树洞的验证码，有效时间12小时。\n",
 		recipient,
