@@ -42,7 +42,7 @@ func initDb() {
 	saveTokenIns, err = db.Prepare("INSERT INTO user_info (email_hash, token, timestamp, attentions) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE timestamp=?, token=?")
 	fatalErrorHandle(&err, "error preparing user_info sql query")
 
-	doPostIns, err = db.Prepare("INSERT INTO posts (email_hash, text, timestamp, tag, type ,file_path, likenum, replynum) VALUES ((SELECT email_hash FROM user_info WHERE token=?), ?, ?, ?, ?, ?, 0, 0)")
+	doPostIns, err = db.Prepare("INSERT INTO posts (email_hash, text, timestamp, tag, type ,file_path, likenum, replynum, reportnum) VALUES ((SELECT email_hash FROM user_info WHERE token=?), ?, ?, ?, ?, ?, 0, 0, 0)")
 	fatalErrorHandle(&err, "error preparing posts sql query")
 
 	getInfoOut, err = db.Prepare("SELECT attentions, email_hash FROM user_info WHERE token=?")
@@ -63,7 +63,7 @@ func initDb() {
 	getCommentCountOut, err = db.Prepare("SELECT count( DISTINCT(email_hash) ) FROM comments WHERE pid=? AND email_hash != ?")
 	fatalErrorHandle(&err, "error preparing comments sql query")
 
-	getOnePostOut, err = db.Prepare("SELECT email_hash, text, timestamp, tag, type, file_path, likenum, replynum FROM posts WHERE pid=?")
+	getOnePostOut, err = db.Prepare("SELECT email_hash, text, timestamp, tag, type, file_path, likenum, replynum FROM posts WHERE pid=? AND reportnum<10")
 	fatalErrorHandle(&err, "error preparing posts sql query")
 
 	plusOneCommentIns, err = db.Prepare("UPDATE posts SET replynum=replynum+1 WHERE pid=?")
@@ -81,10 +81,10 @@ func initDb() {
 	getCommentsOut, err = db.Prepare("SELECT cid, email_hash, text, tag, timestamp, name FROM comments WHERE pid=?")
 	fatalErrorHandle(&err, "error preparing comments sql query")
 
-	getPostsOut, err = db.Prepare("SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum FROM posts WHERE pid>? AND pid<=? ORDER BY pid DESC")
+	getPostsOut, err = db.Prepare("SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum FROM posts WHERE pid>? AND pid<=? AND reportnum<10 ORDER BY pid DESC")
 	fatalErrorHandle(&err, "error preparing posts sql query")
 
-	searchOut, err = db.Prepare("SELECT * FROM posts WHERE match(text) against(? IN BOOLEAN MODE) ORDER BY pid DESC LIMIT ?, ?")
+	searchOut, err = db.Prepare("SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum FROM posts WHERE match(text) against(? IN BOOLEAN MODE) AND reportnum<10 ORDER BY pid DESC LIMIT ?, ?")
 	fatalErrorHandle(&err, "error preparing posts sql query")
 
 }
@@ -98,7 +98,7 @@ func dbGetOnePost(pid int) (string, string, int, string, string, string, int, in
 
 func dbGetPostsByPidList(pids []int) ([]interface{}, error) {
 	var rtn []interface{}
-	rows, err := db.Query("SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum FROM posts WHERE pid IN (" + SplitToString(pids, ",") + ") ORDER BY pid DESC")
+	rows, err := db.Query("SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum FROM posts WHERE pid IN (" + SplitToString(pids, ",") + ") AND reportnum<10 ORDER BY pid DESC")
 	if err != nil {
 		return nil, err
 	}
