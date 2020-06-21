@@ -21,6 +21,12 @@ func doPost(c *gin.Context) {
 			"msg":  "字数过长！字数限制为" + strconv.Itoa(postMaxLength) + "字。",
 		})
 		return
+	} else if len(text) == 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"code": 1,
+			"msg":  "请输入内容",
+		})
+		return
 	} else if typ != "text" && typ != "image" {
 		c.JSON(http.StatusOK, gin.H{
 			"code": 1,
@@ -89,6 +95,12 @@ func doComment(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code": 1,
 			"msg":  "字数过长！字数限制为" + strconv.Itoa(commentMaxLength) + "字。",
+		})
+		return
+	} else if len(text) == 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"code": 1,
+			"msg":  "请输入内容",
 		})
 		return
 	}
