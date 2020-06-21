@@ -79,7 +79,7 @@ func intSliceToHex(array []int) string {
 	return rtn
 }
 
-func contains(s []int, e int) (int, bool) {
+func containsInt(s []int, e int) (int, bool) {
 	i := -1
 	for i, a := range s {
 		if a == e {
@@ -135,6 +135,22 @@ func getPinnedPids() []int {
 			i, err := strconv.Atoi(str)
 			if err != nil {
 				fatalErrorHandle(&err, "pinned_pids Atoi error:"+str)
+			}
+			rtn = append(rtn, i)
+		}
+	}
+	return rtn
+}
+
+func getReportWhitelistPids() []int {
+	reg := regexp.MustCompile(`[ ,]`)
+	s := viper.GetString("report_whitelist_pids")
+	var rtn []int
+	for _, str := range reg.Split(s, -1) {
+		if str != "" {
+			i, err := strconv.Atoi(str)
+			if err != nil {
+				fatalErrorHandle(&err, "report_whitelist_pids Atoi error:"+str)
 			}
 			rtn = append(rtn, i)
 		}

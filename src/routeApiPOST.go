@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 func doPost(c *gin.Context) {
@@ -195,6 +196,12 @@ func doReport(c *gin.Context) {
 			"msg":  "举报失败，pid不合法",
 		})
 		return
+	} else if _, ok := containsInt(getReportWhitelistPids(), pid); ok {
+		c.JSON(http.StatusOK, gin.H{
+			"code": 1,
+			"msg":  "举报失败，哈哈",
+		})
+		return
 	}
 	token := c.PostForm("user_token")
 	_, _, _, _, _, _, _, _, err = dbGetOnePost(pid)
@@ -213,13 +220,28 @@ func doReport(c *gin.Context) {
 		})
 		return
 	} else {
-		c.JSON(http.StatusOK, gin.H{
-			"code": 0,
-		})
+		if strings.Contains(viper.GetString("report_admin_tokens"), token) {
+			_, err = plusTenReportIns.Exec(pid)
+			if err != nil {
+				log.Printf("error plusTenReportIns while reporting: %s\n", err)
+			}
+		} else {
+			_, err = plusOneReportIns.Exec(pid)
+			if err != nil {
+				log.Printf("error plusOneReportIns while reporting: %s\n", err)
+			}
+		}
 
-		_, err = plusOneReportIns.Exec(pid)
 		if err != nil {
-			log.Printf("error plusOneReportIns while reporting: %s\n", err)
+			c.JSON(http.StatusOK, gin.H{
+				"code": 1,
+				"msg":  "举报失败，数据库写入失败，请联系管理员",
+			})
+			return
+		} else {
+			c.JSON(http.StatusOK, gin.H{
+				"code": 0,
+			})
 		}
 	}
 }

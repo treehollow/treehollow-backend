@@ -10,7 +10,7 @@ func addAttention(token string, pid int) (bool, error) {
 
 func addAttention2(s string, token string, pid int) (bool, error) {
 	pids := hexToIntSlice(s)
-	if _, ok := contains(pids, pid); ok {
+	if _, ok := containsInt(pids, pid); ok {
 		return false, nil
 	}
 	pids = append(pids, pid)
@@ -28,7 +28,7 @@ func removeAttention(token string, pid int) (bool, error) {
 		return false, err
 	}
 	pids := hexToIntSlice(s)
-	i, ok := contains(pids, pid)
+	i, ok := containsInt(pids, pid)
 	if !ok {
 		return false, nil
 	}

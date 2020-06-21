@@ -21,6 +21,7 @@ var checkCommentNameOut *sql.Stmt
 var getCommentCountOut *sql.Stmt
 var plusOneCommentIns *sql.Stmt
 var plusOneReportIns *sql.Stmt
+var plusTenReportIns *sql.Stmt
 var plusOneAttentionIns *sql.Stmt
 var minusOneAttentionIns *sql.Stmt
 var getOnePostOut *sql.Stmt
@@ -70,6 +71,9 @@ func initDb() {
 	fatalErrorHandle(&err, "error preparing posts sql query")
 
 	plusOneReportIns, err = db.Prepare("UPDATE posts SET reportnum=reportnum+1 WHERE pid=?")
+	fatalErrorHandle(&err, "error preparing posts sql query")
+
+	plusTenReportIns, err = db.Prepare("UPDATE posts SET reportnum=reportnum+10 WHERE pid=?")
 	fatalErrorHandle(&err, "error preparing posts sql query")
 
 	plusOneAttentionIns, err = db.Prepare("UPDATE posts SET likenum=likenum+1 WHERE pid=?")
@@ -143,7 +147,7 @@ func dbGetSavedPosts(pidMin int, pidMax int) ([]interface{}, error) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		if _, ok := contains(pinnedPids, pid); !ok {
+		if _, ok := containsInt(pinnedPids, pid); !ok {
 			rtn = append(rtn, gin.H{
 				"pid":       pid,
 				"text":      text,

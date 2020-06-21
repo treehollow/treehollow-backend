@@ -60,7 +60,7 @@ func getComment(c *gin.Context) {
 		s, _, err := dbGetInfoByToken(token)
 		if err == nil {
 			pids := hexToIntSlice(s)
-			if _, ok := contains(pids, pid); ok {
+			if _, ok := containsInt(pids, pid); ok {
 				attention = 1
 			}
 		}
