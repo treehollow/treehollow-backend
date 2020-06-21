@@ -64,6 +64,15 @@ func login(c *gin.Context) {
 	code := c.Query("valid_code")
 	hashedUser := hashEmail(user)
 	now := getTimeStamp()
+
+	if !(strings.HasSuffix(user, "@mails.tsinghua.edu.cn")) || !checkEmail(user) {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"msg":     "很抱歉，您的邮箱无法登录T大树洞。目前只有@mails.tsinghua.edu.cn的邮箱开放登录。",
+		})
+		return
+	}
+
 	correctCode, timeStamp, err := checkCode(hashedUser)
 	if err != nil {
 		log.Printf("check code failed: %s\n", err)
