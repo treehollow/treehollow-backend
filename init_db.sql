@@ -42,3 +42,21 @@ create table comments
     PRIMARY KEY (cid),
     INDEX (pid)
 ) DEFAULT CHARSET = utf8mb4;
+
+ALTER TABLE posts
+    ADD FULLTEXT INDEX (text) WITH PARSER ngram;
+
+create table reports
+(
+    rid        INT            NOT NULL AUTO_INCREMENT,
+    pid        INT            NOT NULL,
+    email_hash CHAR(64)       NOT NULL,
+    reason     VARCHAR(10000) NOT NULL,
+    timestamp  INT            NOT NULL,
+    PRIMARY KEY (rid),
+    CONSTRAINT pid_email UNIQUE (pid, email_hash),
+    INDEX (pid)
+) DEFAULT CHARSET = utf8mb4;
+
+ALTER TABLE posts
+    ADD COLUMN reportnum INT DEFAULT 0 AFTER replynum;

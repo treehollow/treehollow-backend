@@ -16,9 +16,11 @@ var doPostIns *sql.Stmt
 var getInfoOut *sql.Stmt
 var setAttentionsIns *sql.Stmt
 var doCommentIns *sql.Stmt
+var doReportIns *sql.Stmt
 var checkCommentNameOut *sql.Stmt
 var getCommentCountOut *sql.Stmt
 var plusOneCommentIns *sql.Stmt
+var plusOneReportIns *sql.Stmt
 var plusOneAttentionIns *sql.Stmt
 var minusOneAttentionIns *sql.Stmt
 var getOnePostOut *sql.Stmt
@@ -52,6 +54,9 @@ func initDb() {
 	doCommentIns, err = db.Prepare("INSERT INTO comments (email_hash, pid, text, tag, timestamp, name) VALUES ((SELECT email_hash FROM user_info WHERE token=?), ?, ?, ?, ?, ?)")
 	fatalErrorHandle(&err, "error preparing comments sql query")
 
+	doReportIns, err = db.Prepare("INSERT INTO reports (email_hash, pid, reason, timestamp) VALUES ((SELECT email_hash FROM user_info WHERE token=?), ?, ?, ?)")
+	fatalErrorHandle(&err, "error preparing reports sql query")
+
 	checkCommentNameOut, err = db.Prepare("SELECT name FROM comments WHERE pid=? AND email_hash=(SELECT email_hash FROM user_info WHERE token=?)")
 	fatalErrorHandle(&err, "error preparing comments sql query")
 
@@ -62,6 +67,9 @@ func initDb() {
 	fatalErrorHandle(&err, "error preparing posts sql query")
 
 	plusOneCommentIns, err = db.Prepare("UPDATE posts SET replynum=replynum+1 WHERE pid=?")
+	fatalErrorHandle(&err, "error preparing posts sql query")
+
+	plusOneReportIns, err = db.Prepare("UPDATE posts SET reportnum=reportnum+1 WHERE pid=?")
 	fatalErrorHandle(&err, "error preparing posts sql query")
 
 	plusOneAttentionIns, err = db.Prepare("UPDATE posts SET likenum=likenum+1 WHERE pid=?")
@@ -81,14 +89,14 @@ func initDb() {
 
 }
 
-func getOnePost(pid int) (string, string, int, string, string, string, int, int, error) {
+func dbGetOnePost(pid int) (string, string, int, string, string, string, int, int, error) {
 	var emailHash, text, tag, typ, filePath string
 	var timestamp, likenum, replynum int
 	err := getOnePostOut.QueryRow(pid).Scan(&emailHash, &text, &timestamp, &tag, &typ, &filePath, &likenum, &replynum)
 	return emailHash, text, timestamp, tag, typ, filePath, likenum, replynum, err
 }
 
-func getPostsByPidList(pids []int) ([]interface{}, error) {
+func dbGetPostsByPidList(pids []int) ([]interface{}, error) {
 	var rtn []interface{}
 	rows, err := db.Query("SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum FROM posts WHERE pid IN (" + SplitToString(pids, ",") + ") ORDER BY pid DESC")
 	if err != nil {
@@ -120,7 +128,7 @@ func getPostsByPidList(pids []int) ([]interface{}, error) {
 	return rtn, nil
 }
 
-func getSavedPosts(pidMin int, pidMax int) ([]interface{}, error) {
+func dbGetSavedPosts(pidMin int, pidMax int) ([]interface{}, error) {
 	var rtn []interface{}
 	rows, err := getPostsOut.Query(pidMin, pidMax)
 	if err != nil {
@@ -155,7 +163,7 @@ func getSavedPosts(pidMin int, pidMax int) ([]interface{}, error) {
 	return rtn, nil
 }
 
-func searchSavedPosts(str string, limitMin int, searchPageSize int) ([]interface{}, error) {
+func dbSearchSavedPosts(str string, limitMin int, searchPageSize int) ([]interface{}, error) {
 	var rtn []interface{}
 	rows, err := searchOut.Query(str, limitMin, searchPageSize)
 	if err != nil {
@@ -187,7 +195,7 @@ func searchSavedPosts(str string, limitMin int, searchPageSize int) ([]interface
 	return rtn, nil
 }
 
-func getSavedComments(pid int) ([]interface{}, error) {
+func dbGetSavedComments(pid int) ([]interface{}, error) {
 	var rtn []interface{}
 	rows, err := getCommentsOut.Query(pid)
 	if err != nil {
@@ -217,15 +225,14 @@ func getSavedComments(pid int) ([]interface{}, error) {
 	return rtn, nil
 }
 
-func saveCode(user string, code string) error {
-	// Prepare statement for inserting data
+func dbSaveCode(user string, code string) error {
 	timestamp := int32(getTimeStamp())
 	_, err := saveCodeIns.Exec(hashEmail(user), timestamp, code, timestamp, code)
 
 	return err
 }
 
-func checkCode(hashedUser string) (string, int64, error) {
+func dbGetCode(hashedUser string) (string, int64, error) {
 	var timestamp int64
 	var correctCode string
 	err := checkCodeOut.QueryRow(hashedUser).Scan(&timestamp, &correctCode)
@@ -235,31 +242,31 @@ func checkCode(hashedUser string) (string, int64, error) {
 	return correctCode, timestamp, nil
 }
 
-func saveToken(token string, hashedUser string) error {
+func dbSaveToken(token string, hashedUser string) error {
 	timestamp := int32(getTimeStamp())
 	_, err := saveTokenIns.Exec(hashedUser, token, timestamp, "", timestamp, token)
 	return err
 }
 
-func getCommentNameByToken(token string, pid int) (string, error) {
+func dbGetCommentNameByToken(token string, pid int) (string, error) {
 	var name string
 	err := checkCommentNameOut.QueryRow(pid, token).Scan(&name)
 	return name, err
 }
 
-func getMaxPid() (int, error) {
+func dbGetMaxPid() (int, error) {
 	var pid int64
 	err := db.QueryRow("SELECT MAX(pid) FROM posts").Scan(&pid)
 	return int(pid), err
 }
 
-func getCommentCount(pid int, dzEmailHash string) (int, error) {
+func dbGetCommentCount(pid int, dzEmailHash string) (int, error) {
 	var rtn int64
 	err := getCommentCountOut.QueryRow(pid, dzEmailHash).Scan(&rtn)
 	return int(rtn), err
 }
 
-func savePost(token string, text string, tag string, typ string, filePath string) (int, error) {
+func dbSavePost(token string, text string, tag string, typ string, filePath string) (int, error) {
 	timestamp := int32(getTimeStamp())
 	res, err := doPostIns.Exec(token, text, timestamp, tag, typ, filePath)
 	if err != nil {
@@ -274,7 +281,7 @@ func savePost(token string, text string, tag string, typ string, filePath string
 	}
 }
 
-func saveComment(token string, text string, tag string, pid int, name string) (int, error) {
+func dbSaveComment(token string, text string, tag string, pid int, name string) (int, error) {
 	timestamp := int32(getTimeStamp())
 	res, err := doCommentIns.Exec(token, pid, text, tag, timestamp, name)
 	if err != nil {
@@ -289,13 +296,28 @@ func saveComment(token string, text string, tag string, pid int, name string) (i
 	}
 }
 
-func getInfoByToken(token string) (string, string, error) {
+func dbSaveReport(token string, reason string, pid int) (int, error) {
+	timestamp := int32(getTimeStamp())
+	res, err := doReportIns.Exec(token, pid, reason, timestamp)
+	if err != nil {
+		return -1, err
+	}
+	var id int64
+	id, err = res.LastInsertId()
+	if err != nil {
+		return -1, err
+	} else {
+		return int(id), nil
+	}
+}
+
+func dbGetInfoByToken(token string) (string, string, error) {
 	var attentions, emailHash string
 	err := getInfoOut.QueryRow(token).Scan(&attentions, &emailHash)
 	return attentions, emailHash, err
 }
 
-func setAttentions(token string, attentions string) (bool, error) {
+func dbSetAttentions(token string, attentions string) (bool, error) {
 	res, err := setAttentionsIns.Exec(attentions, token)
 	if err != nil {
 		return false, err

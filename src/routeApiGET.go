@@ -19,7 +19,7 @@ func getOne(c *gin.Context) {
 	}
 	var text, tag, typ, filePath string
 	var timestamp, likenum, replynum int
-	_, text, timestamp, tag, typ, filePath, likenum, replynum, err = getOnePost(pid)
+	_, text, timestamp, tag, typ, filePath, likenum, replynum, err = dbGetOnePost(pid)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code": 1,
@@ -57,7 +57,7 @@ func getComment(c *gin.Context) {
 	token := c.Query("user_token")
 	attention := 0
 	if len(token) == 32 {
-		s, _, err := getInfoByToken(token)
+		s, _, err := dbGetInfoByToken(token)
 		if err == nil {
 			pids := hexToIntSlice(s)
 			if _, ok := contains(pids, pid); ok {
@@ -65,9 +65,9 @@ func getComment(c *gin.Context) {
 			}
 		}
 	}
-	data, err2 := getSavedComments(pid)
+	data, err2 := dbGetSavedComments(pid)
 	if err2 != nil {
-		log.Printf("getSavedComments failed: %s\n", err2)
+		log.Printf("dbGetSavedComments failed: %s\n", err2)
 		c.JSON(http.StatusOK, gin.H{
 			"code": 1,
 			"msg":  "数据库读取失败，请联系管理员",
@@ -93,9 +93,9 @@ func getList(c *gin.Context) {
 		return
 	}
 	var maxPid int
-	maxPid, err = getMaxPid()
+	maxPid, err = dbGetMaxPid()
 	if err != nil {
-		log.Printf("getMaxPid failed: %s\n", err)
+		log.Printf("dbGetMaxPid failed: %s\n", err)
 		c.JSON(http.StatusOK, gin.H{
 			"code":      0,
 			"data":      []string{},
@@ -106,9 +106,9 @@ func getList(c *gin.Context) {
 	}
 	pidLeft := maxPid - p*pageSize
 	pidRight := maxPid - (p-1)*pageSize
-	data, err2 := getSavedPosts(pidLeft, pidRight)
+	data, err2 := dbGetSavedPosts(pidLeft, pidRight)
 	if err2 != nil {
-		log.Printf("getSavedPosts failed while getList: %s\n", err2)
+		log.Printf("dbGetSavedPosts failed while getList: %s\n", err2)
 		c.JSON(http.StatusOK, gin.H{
 			"code": 1,
 			"msg":  "数据库读取失败，请联系管理员",
@@ -117,7 +117,7 @@ func getList(c *gin.Context) {
 	} else {
 		pinnedPids := getPinnedPids()
 		if len(pinnedPids) > 0 && p == 1 {
-			pinnedData, err3 := getPostsByPidList(pinnedPids)
+			pinnedData, err3 := dbGetPostsByPidList(pinnedPids)
 			if err3 != nil {
 				log.Printf("get pinned post failed: %s\n", err2)
 				c.JSON(http.StatusOK, gin.H{
@@ -165,9 +165,9 @@ func searchPost(c *gin.Context) {
 	}
 	keywords := c.Query("keywords")
 
-	data, err2 := searchSavedPosts(strings.ReplaceAll(keywords, " ", " +"), (page-1)*pageSize, pageSize)
+	data, err2 := dbSearchSavedPosts(strings.ReplaceAll(keywords, " ", " +"), (page-1)*pageSize, pageSize)
 	if err2 != nil {
-		log.Printf("searchSavedPosts failed while searchList: %s\n", err2)
+		log.Printf("dbSearchSavedPosts failed while searchList: %s\n", err2)
 		c.JSON(http.StatusOK, gin.H{
 			"code": 1,
 			"msg":  "数据库读取失败，请联系管理员",
@@ -186,10 +186,10 @@ func searchPost(c *gin.Context) {
 
 func getAttention(c *gin.Context) {
 	token := c.Query("user_token")
-	attentions, _, err := getInfoByToken(token)
+	attentions, _, err := dbGetInfoByToken(token)
 
 	if err != nil {
-		log.Printf("getInfoByToken failed: %s\n", err)
+		log.Printf("dbGetInfoByToken failed: %s\n", err)
 		c.JSON(http.StatusOK, gin.H{
 			"code": 1,
 			"msg":  "操作失败，请检查登陆状态",
@@ -207,9 +207,9 @@ func getAttention(c *gin.Context) {
 		})
 		return
 	}
-	data, err2 := getPostsByPidList(pids)
+	data, err2 := dbGetPostsByPidList(pids)
 	if err2 != nil {
-		log.Printf("getPostsByPidList failed while getAttention: %s\n", err2)
+		log.Printf("dbGetPostsByPidList failed while getAttention: %s\n", err2)
 		c.JSON(http.StatusOK, gin.H{
 			"code": 1,
 			"msg":  "数据库读取失败，请联系管理员",

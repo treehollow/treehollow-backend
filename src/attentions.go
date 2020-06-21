@@ -1,7 +1,7 @@
 package main
 
 func addAttention(token string, pid int) (bool, error) {
-	s, _, err := getInfoByToken(token)
+	s, _, err := dbGetInfoByToken(token)
 	if err != nil {
 		return false, err
 	}
@@ -14,7 +14,7 @@ func addAttention2(s string, token string, pid int) (bool, error) {
 		return false, nil
 	}
 	pids = append(pids, pid)
-	success, err := setAttentions(token, intSliceToHex(pids))
+	success, err := dbSetAttentions(token, intSliceToHex(pids))
 	if success {
 		//TODO: handle error here
 		_, _ = plusOneAttentionIns.Exec(pid)
@@ -23,7 +23,7 @@ func addAttention2(s string, token string, pid int) (bool, error) {
 }
 
 func removeAttention(token string, pid int) (bool, error) {
-	s, _, err := getInfoByToken(token)
+	s, _, err := dbGetInfoByToken(token)
 	if err != nil {
 		return false, err
 	}
@@ -34,7 +34,7 @@ func removeAttention(token string, pid int) (bool, error) {
 	}
 	pids = remove(pids, i)
 	var success bool
-	success, err = setAttentions(token, intSliceToHex(pids))
+	success, err = dbSetAttentions(token, intSliceToHex(pids))
 	if success {
 		//TODO: handle error here
 		_, _ = minusOneAttentionIns.Exec(pid)

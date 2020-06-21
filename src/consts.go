@@ -6,6 +6,7 @@ const searchMaxPageSize = 50
 const searchMaxPage = 60
 const postMaxLength = 10000
 const commentMaxLength = 10000
+const reportMaxLength = 1000
 const imgMaxLength = 2000000
 const Base64Rate = 1.33333333
 

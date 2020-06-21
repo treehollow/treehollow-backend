@@ -46,13 +46,13 @@ func doPost(c *gin.Context) {
 	var imgPath string
 	if typ == "image" {
 		imgPath = genToken()
-		pid, err = savePost(token, text, "", typ, imgPath+".jpeg")
+		pid, err = dbSavePost(token, text, "", typ, imgPath+".jpeg")
 	} else {
-		pid, err = savePost(token, text, "", typ, "")
+		pid, err = dbSavePost(token, text, "", typ, "")
 	}
 
 	if err != nil {
-		log.Printf("error savePost! %s\n", err)
+		log.Printf("error dbSavePost! %s\n", err)
 		c.JSON(http.StatusOK, gin.H{
 			"code": 1,
 			"msg":  "发送失败，请检查登陆状态",
@@ -113,7 +113,7 @@ func doComment(c *gin.Context) {
 		return
 	}
 	token := c.PostForm("user_token")
-	s, emailHash, err := getInfoByToken(token)
+	s, emailHash, err := dbGetInfoByToken(token)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code": 1,
@@ -122,7 +122,7 @@ func doComment(c *gin.Context) {
 		return
 	}
 	var dzEmailHash string
-	dzEmailHash, _, _, _, _, _, _, _, err = getOnePost(pid)
+	dzEmailHash, _, _, _, _, _, _, _, err = dbGetOnePost(pid)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code": 1,
@@ -135,10 +135,10 @@ func doComment(c *gin.Context) {
 	if dzEmailHash == emailHash {
 		name = dzName
 	} else {
-		name, err = getCommentNameByToken(token, pid)
+		name, err = dbGetCommentNameByToken(token, pid)
 		if err != nil { // token is not in comments
 			var i int
-			i, err = getCommentCount(pid, dzEmailHash)
+			i, err = dbGetCommentCount(pid, dzEmailHash)
 			if err != nil {
 				c.JSON(http.StatusOK, gin.H{
 					"code": 1,
@@ -149,7 +149,7 @@ func doComment(c *gin.Context) {
 			name = getCommenterName(i + 1)
 		}
 	}
-	_, err = saveComment(token, text, "", pid, name)
+	_, err = dbSaveComment(token, text, "", pid, name)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code": 1,
@@ -169,6 +169,57 @@ func doComment(c *gin.Context) {
 		_, err = addAttention2(s, token, pid)
 		if err != nil {
 			log.Printf("error addAttention2 while commenting: %s\n", err)
+		}
+	}
+}
+
+func doReport(c *gin.Context) {
+	reason := c.PostForm("reason")
+	if len(reason) > reportMaxLength {
+		c.JSON(http.StatusOK, gin.H{
+			"code": 1,
+			"msg":  "字数过长！字数限制为" + strconv.Itoa(reportMaxLength) + "字。",
+		})
+		return
+	} else if len(reason) == 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"code": 1,
+			"msg":  "请输入内容",
+		})
+		return
+	}
+	pid, err := strconv.Atoi(c.PostForm("pid"))
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code": 1,
+			"msg":  "举报失败，pid不合法",
+		})
+		return
+	}
+	token := c.PostForm("user_token")
+	_, _, _, _, _, _, _, _, err = dbGetOnePost(pid)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code": 1,
+			"msg":  "举报失败，pid不存在",
+		})
+		return
+	}
+	_, err = dbSaveReport(token, reason, pid)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code": 1,
+			"msg":  "举报失败",
+		})
+		return
+	} else {
+		c.JSON(http.StatusOK, gin.H{
+			"code": 0,
+		})
+
+		_, err = plusOneReportIns.Exec(pid)
+		if err != nil {
+			log.Printf("error plusOneReportIns while reporting: %s\n", err)
 		}
 	}
 }
@@ -223,10 +274,7 @@ func apiPost(c *gin.Context) {
 		doAttention(c)
 		return
 	case "report":
-		c.JSON(http.StatusOK, gin.H{
-			"code": 1,
-			"msg":  "额，这个功能还在开发。。。",
-		})
+		doReport(c)
 		return
 	default:
 		c.AbortWithStatus(403)

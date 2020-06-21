@@ -21,9 +21,9 @@ func sendCode(c *gin.Context) {
 
 	hashedUser := hashEmail(user)
 	now := getTimeStamp()
-	_, timeStamp, err := checkCode(hashedUser)
+	_, timeStamp, err := dbGetCode(hashedUser)
 	if err != nil {
-		log.Printf("checkCode failed when sendCode: %s\n", err)
+		log.Printf("dbGetCode failed when sendCode: %s\n", err)
 	}
 	if now-timeStamp < 600 {
 		c.JSON(http.StatusOK, gin.H{
@@ -43,7 +43,7 @@ func sendCode(c *gin.Context) {
 		return
 	}
 
-	err = saveCode(user, code)
+	err = dbSaveCode(user, code)
 	if err != nil {
 		log.Printf("save code failed: %s\n", err)
 		c.JSON(http.StatusOK, gin.H{
@@ -73,7 +73,7 @@ func login(c *gin.Context) {
 		return
 	}
 
-	correctCode, timeStamp, err := checkCode(hashedUser)
+	correctCode, timeStamp, err := dbGetCode(hashedUser)
 	if err != nil {
 		log.Printf("check code failed: %s\n", err)
 	}
@@ -86,7 +86,7 @@ func login(c *gin.Context) {
 		return
 	}
 	token := genToken()
-	err = saveToken(token, hashedUser)
+	err = dbSaveToken(token, hashedUser)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"code": 1,
@@ -107,7 +107,7 @@ func systemMsg(c *gin.Context) {
 	c.Header("Content-Type", "application/json; charset=utf-8")
 	//TODO: implement this
 	token := c.Query("user_token")
-	_, _, err := getInfoByToken(token)
+	_, _, err := dbGetInfoByToken(token)
 	if err == nil {
 		c.String(http.StatusOK, `{"error":null,"result":[{"content":"test","timestamp":0,"title":""}]}`)
 	} else {
