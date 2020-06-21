@@ -38,7 +38,7 @@ func sendCode(c *gin.Context) {
 		log.Printf("send mail to %s failed: %s\n", user, err)
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"msg":     "验证码邮件发送失败",
+			"msg":     "验证码邮件发送失败。现阶段暂时每小时开放注册100个账户。",
 		})
 		return
 	}
