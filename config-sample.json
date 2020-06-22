@@ -4,6 +4,7 @@
   "pinned_pids": "1,23",
   "report_whitelist_pids": "1,23",
   "report_admin_tokens": "adsfadsf,adfadsf",
+  "bannedEmailHashed": "adsfadsf,adfadsf",
   "mailgun_key": "xxx",
   "mailgun_domain": "mail.thuhole.com",
   "is_debug": true

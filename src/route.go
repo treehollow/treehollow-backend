@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/spf13/viper"
 	"log"
 	"net/http"
 	"strings"
@@ -20,6 +21,13 @@ func sendCode(c *gin.Context) {
 	}
 
 	hashedUser := hashEmail(user)
+	if strings.Contains(viper.GetString("bannedEmailHashed"), hashedUser) {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"msg":     "很抱歉，您已被永久封禁。",
+		})
+		return
+	}
 	now := getTimeStamp()
 	_, timeStamp, err := dbGetCode(hashedUser)
 	if err != nil {
@@ -63,6 +71,13 @@ func login(c *gin.Context) {
 	user := c.Query("user")
 	code := c.Query("valid_code")
 	hashedUser := hashEmail(user)
+	if strings.Contains(viper.GetString("bannedEmailHashed"), hashedUser) {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"msg":     "很抱歉，您已被永久封禁。",
+		})
+		return
+	}
 	now := getTimeStamp()
 
 	if !(strings.HasSuffix(user, "@mails.tsinghua.edu.cn")) || !checkEmail(user) {
