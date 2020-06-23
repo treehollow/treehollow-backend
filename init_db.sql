@@ -60,3 +60,12 @@ create table reports
 
 ALTER TABLE posts
     ADD COLUMN reportnum INT DEFAULT 0 AFTER replynum;
+
+create table banned
+(
+    email_hash  CHAR(64)       NOT NULL,
+    reason      VARCHAR(10000) NOT NULL,
+    timestamp   INT            NOT NULL,
+    expire_time INT            NOT NULL,
+    INDEX (email_hash)
+) DEFAULT CHARSET = utf8mb4;

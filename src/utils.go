@@ -6,8 +6,10 @@ import (
 	"encoding/base32"
 	"encoding/hex"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
 	"math/big"
+	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
@@ -162,4 +164,11 @@ func checkEmail(email string) bool {
 	// REF: https://html.spec.whatwg.org/multipage/input.html#valid-e-mail-address
 	var emailRegexp = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 	return emailRegexp.MatchString(email)
+}
+
+func httpReturnWithCodeOne(c *gin.Context, msg string) {
+	c.JSON(http.StatusOK, gin.H{
+		"code": 1,
+		"msg":  msg,
+	})
 }

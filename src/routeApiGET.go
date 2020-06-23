@@ -11,20 +11,14 @@ import (
 func getOne(c *gin.Context) {
 	pid, err := strconv.Atoi(c.Query("pid"))
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code": 1,
-			"msg":  "获取失败，pid不合法",
-		})
+		httpReturnWithCodeOne(c, "获取失败，pid不合法")
 		return
 	}
 	var text, tag, typ, filePath string
 	var timestamp, likenum, replynum int
-	_, text, timestamp, tag, typ, filePath, likenum, replynum, err = dbGetOnePost(pid)
+	_, text, timestamp, tag, typ, filePath, likenum, replynum, _, err = dbGetOnePost(pid)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code": 1,
-			"msg":  "获取失败，pid不存在",
-		})
+		httpReturnWithCodeOne(c, "获取失败，pid不存在")
 		return
 	} else {
 		c.JSON(http.StatusOK, gin.H{
@@ -48,10 +42,7 @@ func getOne(c *gin.Context) {
 func getComment(c *gin.Context) {
 	pid, err := strconv.Atoi(c.Query("pid"))
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code": 1,
-			"msg":  "获取失败，pid不合法",
-		})
+		httpReturnWithCodeOne(c, "获取失败，pid不合法")
 		return
 	}
 	token := c.Query("user_token")
@@ -68,10 +59,7 @@ func getComment(c *gin.Context) {
 	data, err2 := dbGetSavedComments(pid)
 	if err2 != nil {
 		log.Printf("dbGetSavedComments failed: %s\n", err2)
-		c.JSON(http.StatusOK, gin.H{
-			"code": 1,
-			"msg":  "数据库读取失败，请联系管理员",
-		})
+		httpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
 		return
 	} else {
 		c.JSON(http.StatusOK, gin.H{
@@ -86,10 +74,7 @@ func getComment(c *gin.Context) {
 func getList(c *gin.Context) {
 	p, err := strconv.Atoi(c.Query("p"))
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code": 1,
-			"msg":  "获取失败，参数p不合法",
-		})
+		httpReturnWithCodeOne(c, "获取失败，参数p不合法")
 		return
 	}
 	var maxPid int
@@ -109,10 +94,7 @@ func getList(c *gin.Context) {
 	data, err2 := dbGetSavedPosts(pidLeft, pidRight)
 	if err2 != nil {
 		log.Printf("dbGetSavedPosts failed while getList: %s\n", err2)
-		c.JSON(http.StatusOK, gin.H{
-			"code": 1,
-			"msg":  "数据库读取失败，请联系管理员",
-		})
+		httpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
 		return
 	} else {
 		pinnedPids := getPinnedPids()
@@ -120,10 +102,7 @@ func getList(c *gin.Context) {
 			pinnedData, err3 := dbGetPostsByPidList(pinnedPids)
 			if err3 != nil {
 				log.Printf("get pinned post failed: %s\n", err2)
-				c.JSON(http.StatusOK, gin.H{
-					"code": 1,
-					"msg":  "数据库读取失败，请联系管理员",
-				})
+				httpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
 				return
 			} else {
 				rtnData := append(pinnedData, data...)
@@ -149,18 +128,12 @@ func getList(c *gin.Context) {
 func searchPost(c *gin.Context) {
 	page, err := strconv.Atoi(c.Query("page"))
 	if err != nil || page > searchMaxPage {
-		c.JSON(http.StatusOK, gin.H{
-			"code": 1,
-			"msg":  "获取失败，参数page不合法",
-		})
+		httpReturnWithCodeOne(c, "获取失败，参数page不合法")
 		return
 	}
 	pageSize, err := strconv.Atoi(c.Query("pagesize"))
 	if err != nil || pageSize > searchMaxPageSize {
-		c.JSON(http.StatusOK, gin.H{
-			"code": 1,
-			"msg":  "获取失败，参数pagesize不合法",
-		})
+		httpReturnWithCodeOne(c, "获取失败，参数pagesize不合法")
 		return
 	}
 	keywords := c.Query("keywords")
@@ -168,10 +141,7 @@ func searchPost(c *gin.Context) {
 	data, err2 := dbSearchSavedPosts(strings.ReplaceAll(keywords, " ", " +"), (page-1)*pageSize, pageSize)
 	if err2 != nil {
 		log.Printf("dbSearchSavedPosts failed while searchList: %s\n", err2)
-		c.JSON(http.StatusOK, gin.H{
-			"code": 1,
-			"msg":  "数据库读取失败，请联系管理员",
-		})
+		httpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
 		return
 	} else {
 		c.JSON(http.StatusOK, gin.H{
@@ -190,10 +160,7 @@ func getAttention(c *gin.Context) {
 
 	if err != nil {
 		log.Printf("dbGetInfoByToken failed: %s\n", err)
-		c.JSON(http.StatusOK, gin.H{
-			"code": 1,
-			"msg":  "操作失败，请检查登陆状态",
-		})
+		httpReturnWithCodeOne(c, "操作失败，请检查登陆状态")
 		return
 	}
 
@@ -210,10 +177,7 @@ func getAttention(c *gin.Context) {
 	data, err2 := dbGetPostsByPidList(pids)
 	if err2 != nil {
 		log.Printf("dbGetPostsByPidList failed while getAttention: %s\n", err2)
-		c.JSON(http.StatusOK, gin.H{
-			"code": 1,
-			"msg":  "数据库读取失败，请联系管理员",
-		})
+		httpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
 		return
 	} else {
 		c.JSON(http.StatusOK, gin.H{

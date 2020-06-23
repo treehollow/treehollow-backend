@@ -21,13 +21,15 @@ var checkCommentNameOut *sql.Stmt
 var getCommentCountOut *sql.Stmt
 var plusOneCommentIns *sql.Stmt
 var plusOneReportIns *sql.Stmt
-var plusTenReportIns *sql.Stmt
+var plus666ReportIns *sql.Stmt
 var plusOneAttentionIns *sql.Stmt
 var minusOneAttentionIns *sql.Stmt
 var getOnePostOut *sql.Stmt
 var getCommentsOut *sql.Stmt
 var getPostsOut *sql.Stmt
 var searchOut *sql.Stmt
+var bannedTimesOut *sql.Stmt
+var banIns *sql.Stmt
 
 func initDb() {
 	var err error
@@ -64,7 +66,7 @@ func initDb() {
 	getCommentCountOut, err = db.Prepare("SELECT count( DISTINCT(email_hash) ) FROM comments WHERE pid=? AND email_hash != ?")
 	fatalErrorHandle(&err, "error preparing comments sql query")
 
-	getOnePostOut, err = db.Prepare("SELECT email_hash, text, timestamp, tag, type, file_path, likenum, replynum FROM posts WHERE pid=? AND reportnum<10")
+	getOnePostOut, err = db.Prepare("SELECT email_hash, text, timestamp, tag, type, file_path, likenum, replynum, reportnum FROM posts WHERE pid=? AND reportnum<10")
 	fatalErrorHandle(&err, "error preparing posts sql query")
 
 	plusOneCommentIns, err = db.Prepare("UPDATE posts SET replynum=replynum+1 WHERE pid=?")
@@ -73,7 +75,7 @@ func initDb() {
 	plusOneReportIns, err = db.Prepare("UPDATE posts SET reportnum=reportnum+1 WHERE pid=?")
 	fatalErrorHandle(&err, "error preparing posts sql query")
 
-	plusTenReportIns, err = db.Prepare("UPDATE posts SET reportnum=reportnum+10 WHERE pid=?")
+	plus666ReportIns, err = db.Prepare("UPDATE posts SET reportnum=reportnum+666 WHERE pid=?")
 	fatalErrorHandle(&err, "error preparing posts sql query")
 
 	plusOneAttentionIns, err = db.Prepare("UPDATE posts SET likenum=likenum+1 WHERE pid=?")
@@ -91,13 +93,31 @@ func initDb() {
 	searchOut, err = db.Prepare("SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum FROM posts WHERE match(text) against(? IN BOOLEAN MODE) AND reportnum<10 ORDER BY pid DESC LIMIT ?, ?")
 	fatalErrorHandle(&err, "error preparing posts sql query")
 
+	bannedTimesOut, err = db.Prepare("SELECT COUNT(*) FROM banned WHERE email_hash=? AND expire_time>?")
+	fatalErrorHandle(&err, "error preparing banned sql query")
+
+	banIns, err = db.Prepare("INSERT INTO banned (email_hash, reason, timestamp, expire_time) VALUES (?, ?, ?, ?)")
+	fatalErrorHandle(&err, "error preparing banned sql query")
 }
 
-func dbGetOnePost(pid int) (string, string, int, string, string, string, int, int, error) {
+func dbGetOnePost(pid int) (string, string, int, string, string, string, int, int, int, error) {
 	var emailHash, text, tag, typ, filePath string
-	var timestamp, likenum, replynum int
-	err := getOnePostOut.QueryRow(pid).Scan(&emailHash, &text, &timestamp, &tag, &typ, &filePath, &likenum, &replynum)
-	return emailHash, text, timestamp, tag, typ, filePath, likenum, replynum, err
+	var timestamp, likenum, replynum, reportnum int
+	err := getOnePostOut.QueryRow(pid).Scan(&emailHash, &text, &timestamp, &tag, &typ, &filePath, &likenum, &replynum, &reportnum)
+	return emailHash, text, timestamp, tag, typ, filePath, likenum, replynum, reportnum, err
+}
+
+func dbBannedTimesPost(dzEmailHash string, fromTimestamp int) (int, error) {
+	var bannedTimes int
+	err := bannedTimesOut.QueryRow(dzEmailHash, fromTimestamp).Scan(&bannedTimes)
+	return bannedTimes, err
+}
+
+func dbSaveBanUser(dzEmailHash string, reason string, interval int) error {
+	timestamp := int(getTimeStamp())
+	_, err := banIns.Exec(dzEmailHash, reason, timestamp, timestamp+interval)
+
+	return err
 }
 
 func dbGetPostsByPidList(pids []int) ([]interface{}, error) {

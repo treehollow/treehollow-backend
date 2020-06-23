@@ -17,28 +17,33 @@ func doPost(c *gin.Context) {
 	token := c.PostForm("user_token")
 	img := c.PostForm("data")
 	if len(text) > postMaxLength {
-		c.JSON(http.StatusOK, gin.H{
-			"code": 1,
-			"msg":  "字数过长！字数限制为" + strconv.Itoa(postMaxLength) + "字。",
-		})
+		httpReturnWithCodeOne(c, "字数过长！字数限制为"+strconv.Itoa(postMaxLength)+"字。")
 		return
 	} else if len(text) == 0 {
-		c.JSON(http.StatusOK, gin.H{
-			"code": 1,
-			"msg":  "请输入内容",
-		})
+		httpReturnWithCodeOne(c, "请输入内容")
 		return
 	} else if typ != "text" && typ != "image" {
-		c.JSON(http.StatusOK, gin.H{
-			"code": 1,
-			"msg":  "未知类型的树洞",
-		})
+		httpReturnWithCodeOne(c, "未知类型的树洞")
 		return
 	} else if int(float64(len(img))/Base64Rate) > imgMaxLength {
-		c.JSON(http.StatusOK, gin.H{
-			"code": 1,
-			"msg":  "图片大小超出限制！",
-		})
+		httpReturnWithCodeOne(c, "图片大小超出限制！")
+		return
+	}
+
+	_, emailHash, err3 := dbGetInfoByToken(token)
+	if err3 != nil {
+		httpReturnWithCodeOne(c, "发送失败，请检查登陆状态")
+		return
+	}
+	timestamp := int(getTimeStamp())
+	bannedTimes, err4 := dbBannedTimesPost(emailHash, timestamp)
+	if err4 != nil {
+		log.Printf("error dbBannedTimesPost while doPost: %s\n", err4)
+		httpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
+		return
+	}
+	if bannedTimes > 0 {
+		httpReturnWithCodeOne(c, "很抱歉，您当前处于禁言状态，无法发送树洞。")
 		return
 	}
 
@@ -93,42 +98,38 @@ func doPost(c *gin.Context) {
 func doComment(c *gin.Context) {
 	text := c.PostForm("text")
 	if len(text) > commentMaxLength {
-		c.JSON(http.StatusOK, gin.H{
-			"code": 1,
-			"msg":  "字数过长！字数限制为" + strconv.Itoa(commentMaxLength) + "字。",
-		})
+		httpReturnWithCodeOne(c, "字数过长！字数限制为"+strconv.Itoa(commentMaxLength)+"字。")
 		return
 	} else if len(text) == 0 {
-		c.JSON(http.StatusOK, gin.H{
-			"code": 1,
-			"msg":  "请输入内容",
-		})
+		httpReturnWithCodeOne(c, "请输入内容")
 		return
 	}
 	pid, err := strconv.Atoi(c.PostForm("pid"))
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code": 1,
-			"msg":  "发送失败，pid不合法",
-		})
+		httpReturnWithCodeOne(c, "发送失败，pid不合法")
 		return
 	}
 	token := c.PostForm("user_token")
-	s, emailHash, err := dbGetInfoByToken(token)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code": 1,
-			"msg":  "发送失败，请检查登陆状态",
-		})
+	s, emailHash, err5 := dbGetInfoByToken(token)
+	if err5 != nil {
+		httpReturnWithCodeOne(c, "发送失败，请检查登陆状态")
+		return
+	}
+	timestamp := int(getTimeStamp())
+	bannedTimes, err4 := dbBannedTimesPost(emailHash, timestamp)
+	if err4 != nil {
+		log.Printf("error dbBannedTimesPost while doPost: %s\n", err4)
+		httpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
+		return
+	}
+	if bannedTimes > 0 {
+		httpReturnWithCodeOne(c, "很抱歉，您当前处于禁言状态，无法发送评论。")
 		return
 	}
 	var dzEmailHash string
-	dzEmailHash, _, _, _, _, _, _, _, err = dbGetOnePost(pid)
+	dzEmailHash, _, _, _, _, _, _, _, _, err = dbGetOnePost(pid)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code": 1,
-			"msg":  "发送失败，pid不存在",
-		})
+		httpReturnWithCodeOne(c, "发送失败，pid不存在")
 		return
 	}
 
@@ -152,10 +153,7 @@ func doComment(c *gin.Context) {
 	}
 	_, err = dbSaveComment(token, text, "", pid, name)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code": 1,
-			"msg":  "数据库写入失败，请联系管理员",
-		})
+		httpReturnWithCodeOne(c, "数据库写入失败，请联系管理员")
 		return
 	} else {
 		c.JSON(http.StatusOK, gin.H{
@@ -177,66 +175,64 @@ func doComment(c *gin.Context) {
 func doReport(c *gin.Context) {
 	reason := c.PostForm("reason")
 	if len(reason) > reportMaxLength {
-		c.JSON(http.StatusOK, gin.H{
-			"code": 1,
-			"msg":  "字数过长！字数限制为" + strconv.Itoa(reportMaxLength) + "字。",
-		})
+		httpReturnWithCodeOne(c, "字数过长！字数限制为"+strconv.Itoa(reportMaxLength)+"字。")
 		return
 	} else if len(reason) == 0 {
-		c.JSON(http.StatusOK, gin.H{
-			"code": 1,
-			"msg":  "请输入内容",
-		})
+		httpReturnWithCodeOne(c, "请输入内容")
 		return
 	}
 	pid, err := strconv.Atoi(c.PostForm("pid"))
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code": 1,
-			"msg":  "举报失败，pid不合法",
-		})
+		httpReturnWithCodeOne(c, "举报失败，pid不合法")
 		return
 	} else if _, ok := containsInt(getReportWhitelistPids(), pid); ok {
-		c.JSON(http.StatusOK, gin.H{
-			"code": 1,
-			"msg":  "举报失败，哈哈",
-		})
+		httpReturnWithCodeOne(c, "举报失败，哈哈")
 		return
 	}
 	token := c.PostForm("user_token")
-	_, _, _, _, _, _, _, _, err = dbGetOnePost(pid)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code": 1,
-			"msg":  "举报失败，pid不存在",
-		})
+	dzEmailHash, _, _, _, _, _, _, _, reportnum, err2 := dbGetOnePost(pid)
+	if err2 != nil {
+		httpReturnWithCodeOne(c, "举报失败，pid不存在")
 		return
 	}
 	_, err = dbSaveReport(token, reason, pid)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code": 1,
-			"msg":  "举报失败",
-		})
+		httpReturnWithCodeOne(c, "举报失败")
 		return
 	} else {
 		if strings.Contains(viper.GetString("report_admin_tokens"), token) {
-			_, err = plusTenReportIns.Exec(pid)
+			_, err = plus666ReportIns.Exec(pid)
 			if err != nil {
-				log.Printf("error plusTenReportIns while reporting: %s\n", err)
+				log.Printf("error plus666ReportIns while reporting: %s\n", err)
+			}
+			bannedTimes, err3 := dbBannedTimesPost(dzEmailHash, -1)
+			if err3 != nil {
+				log.Printf("error dbBannedTimesPost while reporting: %s\n", err)
+			}
+			err = dbSaveBanUser(dzEmailHash, "您的树洞#"+strconv.Itoa(pid)+"被管理员删除。管理员的删除理由是：【"+reason+"】。", (1+bannedTimes)*86400)
+			if err != nil {
+				log.Printf("error dbSaveBanUser while reporting: %s\n", err)
 			}
 		} else {
 			_, err = plusOneReportIns.Exec(pid)
 			if err != nil {
 				log.Printf("error plusOneReportIns while reporting: %s\n", err)
 			}
+			if reportnum == 9 {
+				//禁言
+				bannedTimes, err3 := dbBannedTimesPost(dzEmailHash, -1)
+				if err3 != nil {
+					log.Printf("error dbBannedTimesPost while reporting: %s\n", err)
+				}
+				err = dbSaveBanUser(dzEmailHash, "您的树洞#"+strconv.Itoa(pid)+"由于用户举报过多被删除。", (1+bannedTimes)*86400)
+				if err != nil {
+					log.Printf("error dbSaveBanUser while reporting: %s\n", err)
+				}
+			}
 		}
 
 		if err != nil {
-			c.JSON(http.StatusOK, gin.H{
-				"code": 1,
-				"msg":  "举报失败，数据库写入失败，请联系管理员",
-			})
+			httpReturnWithCodeOne(c, "举报失败，数据库写入失败，请联系管理员")
 			return
 		} else {
 			c.JSON(http.StatusOK, gin.H{
@@ -249,10 +245,7 @@ func doReport(c *gin.Context) {
 func doAttention(c *gin.Context) {
 	pid, err := strconv.Atoi(c.PostForm("pid"))
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code": 1,
-			"msg":  "关注操作失败，pid不合法",
-		})
+		httpReturnWithCodeOne(c, "关注操作失败，pid不合法")
 		return
 	}
 	s := c.PostForm("switch")
@@ -264,16 +257,10 @@ func doAttention(c *gin.Context) {
 		success, err = removeAttention(token, pid)
 	}
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"code": 1,
-			"msg":  "关注操作失败，请检查登陆状态",
-		})
+		httpReturnWithCodeOne(c, "关注操作失败，请检查登陆状态")
 		return
 	} else if !success {
-		c.JSON(http.StatusOK, gin.H{
-			"code": 1,
-			"msg":  "关注操作失败，重复操作",
-		})
+		httpReturnWithCodeOne(c, "关注操作失败，重复操作")
 		return
 	} else {
 		c.JSON(http.StatusOK, gin.H{
