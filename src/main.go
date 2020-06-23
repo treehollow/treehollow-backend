@@ -1,11 +1,9 @@
 package main
 
 import (
-	"bufio"
 	"database/sql"
 	"fmt"
 	"github.com/spf13/viper"
-	"os"
 )
 
 func migrate() {
@@ -53,9 +51,9 @@ func main() {
 	initConfigFile()
 	initDb()
 
-	reader := bufio.NewReader(os.Stdin)
 	fmt.Print("begin migration?(y/n): ")
-	text, _ := reader.ReadString('\n')
+	var text string
+	_, _ = fmt.Scanf("%s", &text)
 	if text == "y" {
 		fmt.Println("begin migration...")
 		migrate()
