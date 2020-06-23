@@ -29,7 +29,7 @@ func migrate() {
 		rows3, err3 := db2.Query("SELECT email_hash, " + primKeyName + " FROM " + table)
 		fatalErrorHandle(&err3, "failed step 3.1! table="+table)
 		for rows3.Next() {
-			err3 = rows.Scan(&emailHash, &primKey)
+			err3 = rows3.Scan(&emailHash, &primKey)
 			fatalErrorHandle(&err3, "failed step 3.2! table="+table)
 			smt, err4 := db2.Prepare("UPDATE " + table + " SET email_hash=? WHERE " + primKeyName + "=?")
 			fatalErrorHandle(&err4, "failed step 3.3! table="+table)
