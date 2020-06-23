@@ -172,3 +172,10 @@ func httpReturnWithCodeOne(c *gin.Context, msg string) {
 		"msg":  msg,
 	})
 }
+
+func safeSubSlice(slice []interface{}, low int, high int) []interface{} {
+	if 0 <= low && low <= high && high <= cap(slice) {
+		return slice[low:high]
+	}
+	return nil
+}

@@ -28,6 +28,7 @@ var getOnePostOut *sql.Stmt
 var getCommentsOut *sql.Stmt
 var getPostsOut *sql.Stmt
 var searchOut *sql.Stmt
+var hotPostsOut *sql.Stmt
 var bannedTimesOut *sql.Stmt
 var banIns *sql.Stmt
 var getBannedOut *sql.Stmt
@@ -92,6 +93,9 @@ func initDb() {
 	fatalErrorHandle(&err, "error preparing posts sql query")
 
 	searchOut, err = db.Prepare("SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum FROM posts WHERE match(text) against(? IN BOOLEAN MODE) AND reportnum<10 ORDER BY pid DESC LIMIT ?, ?")
+	fatalErrorHandle(&err, "error preparing posts sql query")
+
+	hotPostsOut, err = db.Prepare("SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum FROM posts WHERE pid>(SELECT MAX(pid)-1000 FROM posts) AND reportnum<10 ORDER BY replynum DESC")
 	fatalErrorHandle(&err, "error preparing posts sql query")
 
 	bannedTimesOut, err = db.Prepare("SELECT COUNT(*) FROM banned WHERE email_hash=? AND expire_time>?")
@@ -228,6 +232,38 @@ func dbGetBannedMsgs(emailHash string) ([]interface{}, error) {
 func dbSearchSavedPosts(str string, limitMin int, searchPageSize int) ([]interface{}, error) {
 	var rtn []interface{}
 	rows, err := searchOut.Query(str, limitMin, searchPageSize)
+	if err != nil {
+		return nil, err
+	}
+
+	var emailHash, text, tag, typ, filePath string
+	var timestamp, pid, likenum, replynum int
+	for rows.Next() {
+		err := rows.Scan(&pid, &emailHash, &text, &timestamp, &tag, &typ, &filePath, &likenum, &replynum)
+		if err != nil {
+			log.Fatal(err)
+		}
+		rtn = append(rtn, gin.H{
+			"pid":       pid,
+			"text":      text,
+			"type":      typ,
+			"timestamp": timestamp,
+			"reply":     replynum,
+			"likenum":   likenum,
+			"url":       filePath,
+			"tag":       IfThenElse(len(tag) != 0, tag, nil),
+		})
+	}
+	err = rows.Err()
+	if err != nil {
+		return nil, err
+	}
+	return rtn, nil
+}
+
+func dbGetHotPosts() ([]interface{}, error) {
+	var rtn []interface{}
+	rows, err := hotPostsOut.Query()
 	if err != nil {
 		return nil, err
 	}

@@ -125,18 +125,31 @@ func getList(c *gin.Context) {
 	}
 }
 
+var hotPosts []interface{}
+
 func searchPost(c *gin.Context) {
 	page, err := strconv.Atoi(c.Query("page"))
-	if err != nil || page > searchMaxPage {
+	if err != nil || page > searchMaxPage || page <= 0 {
 		httpReturnWithCodeOne(c, "获取失败，参数page不合法")
 		return
 	}
 	pageSize, err := strconv.Atoi(c.Query("pagesize"))
-	if err != nil || pageSize > searchMaxPageSize {
+	if err != nil || pageSize > searchMaxPageSize || pageSize <= 0 {
 		httpReturnWithCodeOne(c, "获取失败，参数pagesize不合法")
 		return
 	}
 	keywords := c.Query("keywords")
+
+	if keywords == "热榜" {
+		rtn := safeSubSlice(hotPosts, (page-1)*pageSize, page*pageSize)
+		c.JSON(http.StatusOK, gin.H{
+			"code":      0,
+			"data":      IfThenElse(rtn != nil, rtn, []string{}),
+			"timestamp": getTimeStamp(),
+			"count":     IfThenElse(rtn != nil, len(rtn), 0),
+		})
+		return
+	}
 
 	data, err2 := dbSearchSavedPosts(strings.ReplaceAll(keywords, " ", " +"), (page-1)*pageSize, pageSize)
 	if err2 != nil {
