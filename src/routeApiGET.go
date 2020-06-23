@@ -173,7 +173,7 @@ func getAttention(c *gin.Context) {
 
 	if err != nil {
 		log.Printf("dbGetInfoByToken failed: %s\n", err)
-		httpReturnWithCodeOne(c, "操作失败，请检查登陆状态")
+		httpReturnWithCodeOne(c, "操作失败，请检查登录状态")
 		return
 	}
 

@@ -32,7 +32,7 @@ func doPost(c *gin.Context) {
 
 	_, emailHash, err3 := dbGetInfoByToken(token)
 	if err3 != nil {
-		httpReturnWithCodeOne(c, "发送失败，请检查登陆状态")
+		httpReturnWithCodeOne(c, "发送失败，请检查登录状态")
 		return
 	}
 	timestamp := int(getTimeStamp())
@@ -61,7 +61,7 @@ func doPost(c *gin.Context) {
 		log.Printf("error dbSavePost! %s\n", err)
 		c.JSON(http.StatusOK, gin.H{
 			"code": 1,
-			"msg":  "发送失败，请检查登陆状态",
+			"msg":  "发送失败，请检查登录状态",
 		})
 		return
 	} else {
@@ -112,7 +112,7 @@ func doComment(c *gin.Context) {
 	token := c.PostForm("user_token")
 	s, emailHash, err5 := dbGetInfoByToken(token)
 	if err5 != nil {
-		httpReturnWithCodeOne(c, "发送失败，请检查登陆状态")
+		httpReturnWithCodeOne(c, "发送失败，请检查登录状态")
 		return
 	}
 	timestamp := int(getTimeStamp())
@@ -263,7 +263,7 @@ func doAttention(c *gin.Context) {
 		success, err = removeAttention(token, pid)
 	}
 	if err != nil {
-		httpReturnWithCodeOne(c, "关注操作失败，请检查登陆状态")
+		httpReturnWithCodeOne(c, "关注操作失败，请检查登录状态")
 		return
 	} else if !success {
 		httpReturnWithCodeOne(c, "关注操作失败，重复操作")
