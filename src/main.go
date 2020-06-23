@@ -3,7 +3,10 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"github.com/gin-gonic/gin"
+	"github.com/robfig/cron"
 	"github.com/spf13/viper"
+	"log"
 )
 
 func migrate() {
@@ -28,11 +31,11 @@ func migrate() {
 	migrateTable := func(table string, primKeyName string) {
 		rows3, err3 := db2.Query("SELECT email_hash, " + primKeyName + " FROM " + table)
 		fatalErrorHandle(&err3, "failed step 3.1! table="+table)
+		smt, err4 := db2.Prepare("UPDATE " + table + " SET email_hash=? WHERE " + primKeyName + "=?")
+		fatalErrorHandle(&err4, "failed step 3.2! table="+table)
 		for rows3.Next() {
 			err3 = rows3.Scan(&emailHash, &primKey)
-			fatalErrorHandle(&err3, "failed step 3.2! table="+table)
-			smt, err4 := db2.Prepare("UPDATE " + table + " SET email_hash=? WHERE " + primKeyName + "=?")
-			fatalErrorHandle(&err4, "failed step 3.3! table="+table)
+			fatalErrorHandle(&err3, "failed step 3.3! table="+table)
 			_, err5 := smt.Exec(hashMap[emailHash], primKey)
 			fatalErrorHandle(&err5, "failed step 3.4! table="+table)
 		}
@@ -59,20 +62,20 @@ func main() {
 		migrate()
 	}
 
-	//log.Println("start timestamp: ", getTimeStamp())
-	//if false == viper.GetBool("is_debug") {
-	//	gin.SetMode(gin.ReleaseMode)
-	//}
-	//
-	//var err error
-	//hotPosts, _ = dbGetHotPosts()
-	//c := cron.New()
-	//_, _ = c.AddFunc("*/10 * * * *", func() {
-	//	hotPosts, err = dbGetHotPosts()
-	//	log.Println("refreshed hotPosts ,err=", err)
-	//})
-	//c.Start()
-	//
-	//listenHttp()
+	log.Println("start timestamp: ", getTimeStamp())
+	if false == viper.GetBool("is_debug") {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
+	var err error
+	hotPosts, _ = dbGetHotPosts()
+	c := cron.New()
+	_, _ = c.AddFunc("*/10 * * * *", func() {
+		hotPosts, err = dbGetHotPosts()
+		log.Println("refreshed hotPosts ,err=", err)
+	})
+	c.Start()
+
+	listenHttp()
 
 }
