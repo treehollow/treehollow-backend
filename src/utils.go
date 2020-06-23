@@ -34,10 +34,14 @@ func genToken() string {
 	return strings.ToLower(base32.StdEncoding.EncodeToString(randomBytes))
 }
 
-func hashEmail(user string) string {
+func hash1(user string) string {
 	h := sha256.New()
 	h.Write([]byte(user))
 	return hex.EncodeToString(h.Sum(nil))
+}
+
+func hashEmail(user string) string {
+	return hash1(viper.GetString("salt") + hash1(user))
 }
 
 func getTimeStamp() int64 {
