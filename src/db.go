@@ -30,6 +30,7 @@ var getPostsOut *sql.Stmt
 var searchOut *sql.Stmt
 var bannedTimesOut *sql.Stmt
 var banIns *sql.Stmt
+var getBannedOut *sql.Stmt
 
 func initDb() {
 	var err error
@@ -97,6 +98,9 @@ func initDb() {
 	fatalErrorHandle(&err, "error preparing banned sql query")
 
 	banIns, err = db.Prepare("INSERT INTO banned (email_hash, reason, timestamp, expire_time) VALUES (?, ?, ?, ?)")
+	fatalErrorHandle(&err, "error preparing banned sql query")
+
+	getBannedOut, err = db.Prepare("SELECT reason, timestamp, expire_time FROM banned WHERE email_hash=? ORDER BY timestamp DESC")
 	fatalErrorHandle(&err, "error preparing banned sql query")
 }
 
@@ -183,6 +187,40 @@ func dbGetSavedPosts(pidMin int, pidMax int) ([]interface{}, error) {
 	err = rows.Err()
 	if err != nil {
 		return nil, err
+	}
+	return rtn, nil
+}
+
+func dbGetBannedMsgs(emailHash string) ([]interface{}, error) {
+	var rtn []interface{}
+	rows, err := getBannedOut.Query(emailHash)
+	if err != nil {
+		return nil, err
+	}
+
+	var reason string
+	var timestamp, expireTime int
+	for rows.Next() {
+		err := rows.Scan(&reason, &timestamp, &expireTime)
+		if err != nil {
+			log.Fatal(err)
+		}
+		rtn = append(rtn, gin.H{
+			"content":   reason,
+			"timestamp": timestamp,
+			"title":     "提示",
+		})
+	}
+	err = rows.Err()
+	if err != nil {
+		return nil, err
+	}
+	if len(rtn) == 0 {
+		rtn = append(rtn, gin.H{
+			"content":   "目前尚无系统消息",
+			"timestamp": 0,
+			"title":     "提示",
+		})
 	}
 	return rtn, nil
 }

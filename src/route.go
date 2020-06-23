@@ -120,11 +120,20 @@ func login(c *gin.Context) {
 
 func systemMsg(c *gin.Context) {
 	c.Header("Content-Type", "application/json; charset=utf-8")
-	//TODO: implement this
 	token := c.Query("user_token")
-	_, _, err := dbGetInfoByToken(token)
+	_, emailHash, err := dbGetInfoByToken(token)
 	if err == nil {
-		c.String(http.StatusOK, `{"error":null,"result":[{"content":"test","timestamp":0,"title":""}]}`)
+		data, err2 := dbGetBannedMsgs(emailHash)
+		if err2 != nil {
+			log.Printf("dbGetBannedMsgs failed while systemMsg: %s\n", err2)
+			httpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
+			return
+		} else {
+			c.JSON(http.StatusOK, gin.H{
+				"error":  nil,
+				"result": data,
+			})
+		}
 	} else {
 		log.Printf("check token failed: %s\n", err)
 		c.String(http.StatusOK, `{"error":null,"result":[]}`)
