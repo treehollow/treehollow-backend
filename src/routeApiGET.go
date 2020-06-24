@@ -2,8 +2,10 @@ package main
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/spf13/viper"
 	"log"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -125,6 +127,24 @@ func getList(c *gin.Context) {
 	}
 }
 
+func httpReturnInfo(c *gin.Context, text string) {
+	c.JSON(http.StatusOK, gin.H{
+		"code": 0,
+		"data": []map[string]interface{}{gin.H{
+			"pid":       66666666,
+			"text":      text,
+			"type":      "text",
+			"timestamp": getTimeStamp(),
+			"reply":     0,
+			"likenum":   0,
+			"url":       "",
+			"tag":       nil,
+		}},
+		"timestamp": getTimeStamp(),
+		"count":     1,
+	})
+}
+
 var hotPosts []interface{}
 
 func searchPost(c *gin.Context) {
@@ -149,6 +169,39 @@ func searchPost(c *gin.Context) {
 			"count":     IfThenElse(rtn != nil, len(rtn), 0),
 		})
 		return
+	}
+
+	// Admin function
+	token := c.Query("user_token")
+	setTagRe := regexp.MustCompile(`^settag (.*) (pid|cid)=(\d+)$`)
+	if strings.Contains(viper.GetString("report_admin_tokens"), token) && setTagRe.MatchString(keywords) {
+		strs := setTagRe.FindStringSubmatch(keywords)
+		tag := strs[1]
+		typ := strs[2]
+		id, err2 := strconv.Atoi(strs[3])
+		if err2 != nil {
+			httpReturnInfo(c, typ+"not valid")
+			return
+		}
+		if typ == "pid" {
+			r, err := setPostTagIns.Exec(tag, id)
+			if err != nil {
+				httpReturnInfo(c, "failed")
+				return
+			}
+			rowsAffected, err2 := r.RowsAffected()
+			httpReturnInfo(c, "rows affected = "+strconv.Itoa(int(rowsAffected))+"\nsuccess = "+strconv.FormatBool(err2 == nil))
+			return
+		} else if typ == "cid" {
+			r, err := setCommentTagIns.Exec(tag, id)
+			if err != nil {
+				httpReturnInfo(c, "failed")
+				return
+			}
+			rowsAffected, err2 := r.RowsAffected()
+			httpReturnInfo(c, "rows affected = "+strconv.Itoa(int(rowsAffected))+"\nsuccess = "+strconv.FormatBool(err2 == nil))
+			return
+		}
 	}
 
 	data, err2 := dbSearchSavedPosts(strings.ReplaceAll(keywords, " ", " +"), (page-1)*pageSize, pageSize)

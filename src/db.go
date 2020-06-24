@@ -32,6 +32,8 @@ var hotPostsOut *sql.Stmt
 var bannedTimesOut *sql.Stmt
 var banIns *sql.Stmt
 var getBannedOut *sql.Stmt
+var setPostTagIns *sql.Stmt
+var setCommentTagIns *sql.Stmt
 
 func initDb() {
 	var err error
@@ -106,6 +108,13 @@ func initDb() {
 
 	getBannedOut, err = db.Prepare("SELECT reason, timestamp, expire_time FROM banned WHERE email_hash=? ORDER BY timestamp DESC")
 	fatalErrorHandle(&err, "error preparing banned sql query")
+
+	setPostTagIns, err = db.Prepare("UPDATE posts SET tag=? WHERE pid=?")
+	fatalErrorHandle(&err, "error preparing posts sql query")
+
+	setCommentTagIns, err = db.Prepare("UPDATE comments SET tag=? WHERE cid=?")
+	fatalErrorHandle(&err, "error preparing comments sql query")
+
 }
 
 func dbGetOnePost(pid int) (string, string, int, string, string, string, int, int, int, error) {
