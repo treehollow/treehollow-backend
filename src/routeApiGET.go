@@ -174,7 +174,7 @@ func searchPost(c *gin.Context) {
 	// Admin function
 	token := c.Query("user_token")
 	setTagRe := regexp.MustCompile(`^settag (.*) (pid|cid)=(\d+)$`)
-	if strings.Contains(viper.GetString("report_admin_tokens"), token) && setTagRe.MatchString(keywords) {
+	if strings.Contains(viper.GetString("report_admin_tokens"), token) && len(token) == 32 && setTagRe.MatchString(keywords) {
 		strs := setTagRe.FindStringSubmatch(keywords)
 		tag := strs[1]
 		typ := strs[2]
