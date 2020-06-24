@@ -19,7 +19,7 @@ func main() {
 	var err error
 	hotPosts, _ = dbGetHotPosts()
 	c := cron.New()
-	_, _ = c.AddFunc("*/10 * * * *", func() {
+	_, _ = c.AddFunc("*/1 * * * *", func() {
 		hotPosts, err = dbGetHotPosts()
 		log.Println("refreshed hotPosts ,err=", err)
 	})

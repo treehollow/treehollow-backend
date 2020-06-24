@@ -95,7 +95,7 @@ func initDb() {
 	searchOut, err = db.Prepare("SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum FROM posts WHERE match(text) against(? IN BOOLEAN MODE) AND reportnum<10 ORDER BY pid DESC LIMIT ?, ?")
 	fatalErrorHandle(&err, "error preparing posts sql query")
 
-	hotPostsOut, err = db.Prepare("SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum FROM posts WHERE pid>(SELECT MAX(pid)-1000 FROM posts) AND reportnum<10 ORDER BY likenum*3+replynum+(likenum/(replynum+2))*30-reportnum*20 DESC")
+	hotPostsOut, err = db.Prepare("SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum FROM posts WHERE pid>(SELECT MAX(pid)-1000 FROM posts) AND reportnum<10 ORDER BY likenum*2+replynum+timestamp/3600-reportnum*10 DESC")
 	fatalErrorHandle(&err, "error preparing posts sql query")
 
 	bannedTimesOut, err = db.Prepare("SELECT COUNT(*) FROM banned WHERE email_hash=? AND expire_time>?")
