@@ -29,7 +29,7 @@ func migrate() {
 		inserts = []string{}
 		for _, pid := range pids {
 			if pid <= maxPid {
-				inserts = append(inserts, "("+emailHash+","+strconv.Itoa(pid)+")")
+				inserts = append(inserts, "('"+emailHash+"',"+strconv.Itoa(pid)+")")
 			}
 		}
 		if len(inserts) > 0 {
