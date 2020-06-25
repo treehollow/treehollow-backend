@@ -69,3 +69,10 @@ create table banned
     expire_time INT            NOT NULL,
     INDEX (email_hash)
 ) DEFAULT CHARSET = utf8mb4;
+
+create table attentions
+(
+    email_hash CHAR(64) NOT NULL,
+    pid        INT      NOT NULL,
+    INDEX (email_hash)
+) DEFAULT CHARSET = ascii;
