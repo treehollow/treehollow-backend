@@ -73,6 +73,9 @@ create table banned
     INDEX (email_hash)
 ) DEFAULT CHARSET = utf8mb4;
 
+ALTER TABLE banned
+    MODIFY COLUMN reason VARCHAR(11000) NOT NULL;
+
 create table attentions
 (
     email_hash CHAR(64) NOT NULL,
