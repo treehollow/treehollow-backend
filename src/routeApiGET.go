@@ -234,6 +234,17 @@ func getAttention(c *gin.Context) {
 		httpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
 		return
 	}
+
+	if len(pids) == 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"code":      0,
+			"data":      []string{},
+			"timestamp": getTimeStamp(),
+			"count":     0,
+		})
+		return
+	}
+
 	data, err2 := dbGetPostsByPidList(pids)
 	if err2 != nil {
 		log.Printf("dbGetPostsByPidList failed while getAttention: %s\n", err2)
