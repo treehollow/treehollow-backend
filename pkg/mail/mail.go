@@ -3,7 +3,7 @@ package mail
 import (
 	"bytes"
 	"context"
-	"github.com/mailgun/mailgun-go"
+	"github.com/mailgun/mailgun-go/v4"
 	"github.com/spf13/viper"
 	"gopkg.in/gomail.v2"
 	"html/template"
