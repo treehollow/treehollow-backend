@@ -15,7 +15,7 @@ func migrate() {
 	fatalErrorHandle(&err2, "failed step 1.1!")
 	maxPid, err3 := dbGetMaxPid()
 	fatalErrorHandle(&err3, "failed step 1.2!")
-	_, err5 := db.Exec("create table attentions\n(\n    email_hash CHAR(64) NOT NULL,\n    pid        INT      NOT NULL,\n    INDEX (email_hash)\n) DEFAULT CHARSET = ascii")
+	_, err5 := db.Exec("create table attentions\n(\n    email_hash CHAR(64) NOT NULL,\n    pid        INT      NOT NULL,\n    INDEX (email_hash),\n    CONSTRAINT pid_email UNIQUE (pid, email_hash)\n) DEFAULT CHARSET = ascii")
 	fatalErrorHandle(&err5, "failed step 1.3!")
 
 	var emailHash, s string

@@ -74,5 +74,6 @@ create table attentions
 (
     email_hash CHAR(64) NOT NULL,
     pid        INT      NOT NULL,
-    INDEX (email_hash)
+    INDEX (email_hash),
+    CONSTRAINT pid_email UNIQUE (pid, email_hash)
 ) DEFAULT CHARSET = ascii;
