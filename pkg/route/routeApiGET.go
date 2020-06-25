@@ -1,4 +1,4 @@
-package main
+package route
 
 import (
 	"github.com/gin-gonic/gin"
@@ -8,19 +8,22 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"thuhole-go-backend/pkg/consts"
+	"thuhole-go-backend/pkg/db"
+	"thuhole-go-backend/pkg/utils"
 )
 
 func getOne(c *gin.Context) {
 	pid, err := strconv.Atoi(c.Query("pid"))
 	if err != nil {
-		httpReturnWithCodeOne(c, "获取失败，pid不合法")
+		utils.HttpReturnWithCodeOne(c, "获取失败，pid不合法")
 		return
 	}
 	var text, tag, typ, filePath string
 	var timestamp, likenum, replynum int
-	_, text, timestamp, tag, typ, filePath, likenum, replynum, _, err = dbGetOnePost(pid)
+	_, text, timestamp, tag, typ, filePath, likenum, replynum, _, err = db.DbGetOnePost(pid)
 	if err != nil {
-		httpReturnWithCodeOne(c, "获取失败，pid不存在")
+		utils.HttpReturnWithCodeOne(c, "获取失败，pid不存在")
 		return
 	} else {
 		c.JSON(http.StatusOK, gin.H{
@@ -33,9 +36,9 @@ func getOne(c *gin.Context) {
 				"reply":     replynum,
 				"likenum":   likenum,
 				"url":       filePath,
-				"tag":       IfThenElse(len(tag) != 0, tag, nil),
+				"tag":       utils.IfThenElse(len(tag) != 0, tag, nil),
 			},
-			"timestamp": getTimeStamp(),
+			"timestamp": utils.GetTimeStamp(),
 		})
 		return
 	}
@@ -44,26 +47,26 @@ func getOne(c *gin.Context) {
 func getComment(c *gin.Context) {
 	pid, err := strconv.Atoi(c.Query("pid"))
 	if err != nil {
-		httpReturnWithCodeOne(c, "获取失败，pid不合法")
+		utils.HttpReturnWithCodeOne(c, "获取失败，pid不合法")
 		return
 	}
 	token := c.Query("user_token")
 	attention := 0
 	if len(token) == 32 {
-		emailHash, err := dbGetInfoByToken(token)
+		emailHash, err := db.DbGetInfoByToken(token)
 		if err == nil {
-			attention, _ = dbIsAttention(emailHash, pid)
+			attention, _ = db.DbIsAttention(emailHash, pid)
 		}
 	}
-	data, err2 := dbGetSavedComments(pid)
+	data, err2 := db.DbGetSavedComments(pid)
 	if err2 != nil {
 		log.Printf("dbGetSavedComments failed: %s\n", err2)
-		httpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
+		utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
 		return
 	} else {
 		c.JSON(http.StatusOK, gin.H{
 			"code":      0,
-			"data":      IfThenElse(data != nil, data, []string{}),
+			"data":      utils.IfThenElse(data != nil, data, []string{}),
 			"attention": attention,
 		})
 		return
@@ -73,51 +76,51 @@ func getComment(c *gin.Context) {
 func getList(c *gin.Context) {
 	p, err := strconv.Atoi(c.Query("p"))
 	if err != nil {
-		httpReturnWithCodeOne(c, "获取失败，参数p不合法")
+		utils.HttpReturnWithCodeOne(c, "获取失败，参数p不合法")
 		return
 	}
 	var maxPid int
-	maxPid, err = dbGetMaxPid()
+	maxPid, err = db.DbGetMaxPid()
 	if err != nil {
 		log.Printf("dbGetMaxPid failed: %s\n", err)
 		c.JSON(http.StatusOK, gin.H{
 			"code":      0,
 			"data":      []string{},
-			"timestamp": getTimeStamp(),
+			"timestamp": utils.GetTimeStamp(),
 			"count":     0,
 		})
 		return
 	}
-	pidLeft := maxPid - p*pageSize
-	pidRight := maxPid - (p-1)*pageSize
-	data, err2 := dbGetSavedPosts(pidLeft, pidRight)
+	pidLeft := maxPid - p*consts.PageSize
+	pidRight := maxPid - (p-1)*consts.PageSize
+	data, err2 := db.DbGetSavedPosts(pidLeft, pidRight)
 	if err2 != nil {
 		log.Printf("dbGetSavedPosts failed while getList: %s\n", err2)
-		httpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
+		utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
 		return
 	} else {
-		pinnedPids := getPinnedPids()
+		pinnedPids := utils.GetPinnedPids()
 		if len(pinnedPids) > 0 && p == 1 {
-			pinnedData, err3 := dbGetPostsByPidList(pinnedPids)
+			pinnedData, err3 := db.DbGetPostsByPidList(pinnedPids)
 			if err3 != nil {
 				log.Printf("get pinned post failed: %s\n", err2)
-				httpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
+				utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
 				return
 			} else {
 				rtnData := append(pinnedData, data...)
 				c.JSON(http.StatusOK, gin.H{
 					"code":      0,
 					"data":      rtnData,
-					"timestamp": getTimeStamp(),
-					"count":     IfThenElse(data != nil, len(rtnData), 0),
+					"timestamp": utils.GetTimeStamp(),
+					"count":     utils.IfThenElse(data != nil, len(rtnData), 0),
 				})
 			}
 		} else {
 			c.JSON(http.StatusOK, gin.H{
 				"code":      0,
-				"data":      IfThenElse(data != nil, data, []string{}),
-				"timestamp": getTimeStamp(),
-				"count":     IfThenElse(data != nil, len(data), 0),
+				"data":      utils.IfThenElse(data != nil, data, []string{}),
+				"timestamp": utils.GetTimeStamp(),
+				"count":     utils.IfThenElse(data != nil, len(data), 0),
 			})
 			return
 		}
@@ -131,39 +134,39 @@ func httpReturnInfo(c *gin.Context, text string) {
 			"pid":       66666666,
 			"text":      text,
 			"type":      "text",
-			"timestamp": getTimeStamp(),
+			"timestamp": utils.GetTimeStamp(),
 			"reply":     0,
 			"likenum":   0,
 			"url":       "",
 			"tag":       nil,
 		}},
-		"timestamp": getTimeStamp(),
+		"timestamp": utils.GetTimeStamp(),
 		"count":     1,
 	})
 }
 
-var hotPosts []interface{}
+var HotPosts []interface{}
 
 func searchPost(c *gin.Context) {
 	page, err := strconv.Atoi(c.Query("page"))
-	if err != nil || page > searchMaxPage || page <= 0 {
-		httpReturnWithCodeOne(c, "获取失败，参数page不合法")
+	if err != nil || page > consts.SearchMaxPage || page <= 0 {
+		utils.HttpReturnWithCodeOne(c, "获取失败，参数page不合法")
 		return
 	}
 	pageSize, err := strconv.Atoi(c.Query("pagesize"))
-	if err != nil || pageSize > searchMaxPageSize || pageSize <= 0 {
-		httpReturnWithCodeOne(c, "获取失败，参数pagesize不合法")
+	if err != nil || pageSize > consts.SearchMaxPageSize || pageSize <= 0 {
+		utils.HttpReturnWithCodeOne(c, "获取失败，参数pagesize不合法")
 		return
 	}
 	keywords := c.Query("keywords")
 
 	if keywords == "热榜" {
-		rtn := safeSubSlice(hotPosts, (page-1)*pageSize, page*pageSize)
+		rtn := utils.SafeSubSlice(HotPosts, (page-1)*pageSize, page*pageSize)
 		c.JSON(http.StatusOK, gin.H{
 			"code":      0,
-			"data":      IfThenElse(rtn != nil, rtn, []string{}),
-			"timestamp": getTimeStamp(),
-			"count":     IfThenElse(rtn != nil, len(rtn), 0),
+			"data":      utils.IfThenElse(rtn != nil, rtn, []string{}),
+			"timestamp": utils.GetTimeStamp(),
+			"count":     utils.IfThenElse(rtn != nil, len(rtn), 0),
 		})
 		return
 	}
@@ -183,7 +186,7 @@ func searchPost(c *gin.Context) {
 			return
 		}
 		if typ == "pid" {
-			r, err := setPostTagIns.Exec(tag, id)
+			r, err := db.SetPostTagIns.Exec(tag, id)
 			if err != nil {
 				httpReturnInfo(c, "failed")
 				return
@@ -192,7 +195,7 @@ func searchPost(c *gin.Context) {
 			httpReturnInfo(c, "rows affected = "+strconv.Itoa(int(rowsAffected))+"\nsuccess = "+strconv.FormatBool(err2 == nil))
 			return
 		} else if typ == "cid" {
-			r, err := setCommentTagIns.Exec(tag, id)
+			r, err := db.SetCommentTagIns.Exec(tag, id)
 			if err != nil {
 				httpReturnInfo(c, "failed")
 				return
@@ -205,24 +208,24 @@ func searchPost(c *gin.Context) {
 
 	var data []interface{}
 	if isAdmin && keywords == "deleted" {
-		data, err = dbGetDeletedPosts((page-1)*pageSize, pageSize)
+		data, err = db.DbGetDeletedPosts((page-1)*pageSize, pageSize)
 	} else if isAdmin && keywords == "bans" {
-		data, err = dbGetBans((page-1)*pageSize, pageSize)
+		data, err = db.DbGetBans((page-1)*pageSize, pageSize)
 	} else if isAdmin && keywords == "reports" {
-		data, err = dbGetReports((page-1)*pageSize, pageSize)
+		data, err = db.DbGetReports((page-1)*pageSize, pageSize)
 	} else {
-		data, err = dbSearchSavedPosts(strings.ReplaceAll(keywords, " ", " +"), (page-1)*pageSize, pageSize)
+		data, err = db.DbSearchSavedPosts(strings.ReplaceAll(keywords, " ", " +"), (page-1)*pageSize, pageSize)
 	}
 	if err != nil {
 		log.Printf("dbSearchSavedPosts or dbGetDeletedPosts failed while searchList: %s\n", err)
-		httpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
+		utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
 		return
 	} else {
 		c.JSON(http.StatusOK, gin.H{
 			"code":      0,
-			"data":      IfThenElse(data != nil, data, []string{}),
-			"timestamp": getTimeStamp(),
-			"count":     IfThenElse(data != nil, len(data), 0),
+			"data":      utils.IfThenElse(data != nil, data, []string{}),
+			"timestamp": utils.GetTimeStamp(),
+			"count":     utils.IfThenElse(data != nil, len(data), 0),
 		})
 		return
 	}
@@ -230,18 +233,18 @@ func searchPost(c *gin.Context) {
 
 func getAttention(c *gin.Context) {
 	token := c.Query("user_token")
-	emailHash, err := dbGetInfoByToken(token)
+	emailHash, err := db.DbGetInfoByToken(token)
 
 	if err != nil {
 		log.Printf("dbGetInfoByToken failed: %s\n", err)
-		httpReturnWithCodeOne(c, "操作失败，请检查登录状态")
+		utils.HttpReturnWithCodeOne(c, "操作失败，请检查登录状态")
 		return
 	}
 
-	pids, err3 := dbGetAttentionPids(emailHash)
+	pids, err3 := db.DbGetAttentionPids(emailHash)
 	if err3 != nil {
 		log.Printf("dbGetAttentionPids failed while getAttention: %s\n", err3)
-		httpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
+		utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
 		return
 	}
 
@@ -249,23 +252,23 @@ func getAttention(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"code":      0,
 			"data":      []string{},
-			"timestamp": getTimeStamp(),
+			"timestamp": utils.GetTimeStamp(),
 			"count":     0,
 		})
 		return
 	}
 
-	data, err2 := dbGetPostsByPidList(pids)
+	data, err2 := db.DbGetPostsByPidList(pids)
 	if err2 != nil {
 		log.Printf("dbGetPostsByPidList failed while getAttention: %s\n", err2)
-		httpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
+		utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
 		return
 	} else {
 		c.JSON(http.StatusOK, gin.H{
 			"code":      0,
-			"data":      IfThenElse(data != nil, data, []string{}),
-			"timestamp": getTimeStamp(),
-			"count":     IfThenElse(data != nil, len(data), 0),
+			"data":      utils.IfThenElse(data != nil, data, []string{}),
+			"timestamp": utils.GetTimeStamp(),
+			"count":     utils.IfThenElse(data != nil, len(data), 0),
 		})
 		return
 	}

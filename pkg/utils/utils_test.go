@@ -1,7 +1,6 @@
-package tests
+package utils
 
 import (
-	"regexp"
 	"testing"
 )
 
@@ -17,15 +16,9 @@ var (
 	}
 )
 
-func checkEmail(email string) bool {
-	// REF: https://html.spec.whatwg.org/multipage/input.html#valid-e-mail-address
-	var emailRegexp = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
-	return emailRegexp.MatchString(email)
-}
-
 func TestCheckMail(t *testing.T) {
 	for _, c := range cases {
-		if checkEmail(c.mail) != c.valid {
+		if CheckEmail(c.mail) != c.valid {
 			t.Errorf("%s is expected to be %v", c.mail, c.valid)
 		}
 	}

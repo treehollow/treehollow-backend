@@ -1,4 +1,4 @@
-package main
+package route
 
 import (
 	"github.com/gin-contrib/cors"
@@ -7,12 +7,16 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"thuhole-go-backend/pkg/consts"
+	"thuhole-go-backend/pkg/db"
+	"thuhole-go-backend/pkg/mail"
+	"thuhole-go-backend/pkg/utils"
 )
 
 func sendCode(c *gin.Context) {
-	code := genCode()
+	code := utils.GenCode()
 	user := c.Query("user")
-	if !(strings.HasSuffix(user, "@mails.tsinghua.edu.cn")) || !checkEmail(user) {
+	if !(strings.HasSuffix(user, "@mails.tsinghua.edu.cn")) || !utils.CheckEmail(user) {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"msg":     "很抱歉，您的邮箱无法注册T大树洞。目前只有@mails.tsinghua.edu.cn的邮箱开放注册。",
@@ -20,7 +24,7 @@ func sendCode(c *gin.Context) {
 		return
 	}
 
-	hashedUser := hashEmail(user)
+	hashedUser := utils.HashEmail(user)
 	if strings.Contains(viper.GetString("bannedEmailHashed"), hashedUser) {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -28,8 +32,8 @@ func sendCode(c *gin.Context) {
 		})
 		return
 	}
-	now := getTimeStamp()
-	_, timeStamp, err := dbGetCode(hashedUser)
+	now := utils.GetTimeStamp()
+	_, timeStamp, err := db.DbGetCode(hashedUser)
 	//if err != nil {
 	//	log.Printf("dbGetCode failed when sendCode: %s\n", err)
 	//}
@@ -41,7 +45,7 @@ func sendCode(c *gin.Context) {
 		return
 	}
 
-	_, err = sendMail(code, user)
+	_, err = mail.SendMail(code, user)
 	if err != nil {
 		log.Printf("send mail to %s failed: %s\n", user, err)
 		c.JSON(http.StatusOK, gin.H{
@@ -51,7 +55,7 @@ func sendCode(c *gin.Context) {
 		return
 	}
 
-	err = dbSaveCode(user, code)
+	err = db.DbSaveCode(user, code)
 	if err != nil {
 		log.Printf("save code failed: %s\n", err)
 		c.JSON(http.StatusOK, gin.H{
@@ -70,7 +74,7 @@ func sendCode(c *gin.Context) {
 func login(c *gin.Context) {
 	user := c.Query("user")
 	code := c.Query("valid_code")
-	hashedUser := hashEmail(user)
+	hashedUser := utils.HashEmail(user)
 	if strings.Contains(viper.GetString("bannedEmailHashed"), hashedUser) {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -78,9 +82,9 @@ func login(c *gin.Context) {
 		})
 		return
 	}
-	now := getTimeStamp()
+	now := utils.GetTimeStamp()
 
-	if !(strings.HasSuffix(user, "@mails.tsinghua.edu.cn")) || !checkEmail(user) {
+	if !(strings.HasSuffix(user, "@mails.tsinghua.edu.cn")) || !utils.CheckEmail(user) {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"msg":     "邮箱格式不正确",
@@ -88,7 +92,7 @@ func login(c *gin.Context) {
 		return
 	}
 
-	correctCode, timeStamp, err := dbGetCode(hashedUser)
+	correctCode, timeStamp, err := db.DbGetCode(hashedUser)
 	if err != nil {
 		log.Printf("check code failed: %s\n", err)
 	}
@@ -100,8 +104,8 @@ func login(c *gin.Context) {
 		})
 		return
 	}
-	token := genToken()
-	err = dbSaveToken(token, hashedUser)
+	token := utils.GenToken()
+	err = db.DbSaveToken(token, hashedUser)
 	if err != nil {
 		log.Printf("failed dbSaveToken while login, %s\n", err)
 		c.JSON(http.StatusOK, gin.H{
@@ -122,12 +126,12 @@ func login(c *gin.Context) {
 func systemMsg(c *gin.Context) {
 	c.Header("Content-Type", "application/json; charset=utf-8")
 	token := c.Query("user_token")
-	emailHash, err := dbGetInfoByToken(token)
+	emailHash, err := db.DbGetInfoByToken(token)
 	if err == nil {
-		data, err2 := dbGetBannedMsgs(emailHash)
+		data, err2 := db.DbGetBannedMsgs(emailHash)
 		if err2 != nil {
 			log.Printf("dbGetBannedMsgs failed while systemMsg: %s\n", err2)
-			httpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
+			utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
 			return
 		} else {
 			c.JSON(http.StatusOK, gin.H{
@@ -148,7 +152,7 @@ func systemMsg(c *gin.Context) {
 //	c.String(http.StatusOK, `{"test": "test"}`)
 //}
 
-func listenHttp() {
+func ListenHttp() {
 	r := gin.Default()
 	r.Use(cors.Default())
 	////if viper.GetBool("is_debug") {
@@ -161,5 +165,5 @@ func listenHttp() {
 	r.GET("/api_xmcp/hole/system_msg", systemMsg)
 	r.GET("/services/thuhole/api.php", apiGet)
 	r.POST("/services/thuhole/api.php", apiPost)
-	_ = r.Run(listenAddress)
+	_ = r.Run(consts.ListenAddress)
 }

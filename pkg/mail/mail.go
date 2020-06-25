@@ -1,4 +1,4 @@
-package main
+package mail
 
 import (
 	"bytes"
@@ -8,17 +8,18 @@ import (
 	"gopkg.in/gomail.v2"
 	"html/template"
 	"math/rand"
+	"thuhole-go-backend/pkg/utils"
 	"time"
 )
 
-func sendMail(code string, recipient string) (string, error) {
+func SendMail(code string, recipient string) (string, error) {
 	apiKey := viper.GetString("mailgun_key")
 	domain := viper.GetString("mailgun_domain")
 	mg := mailgun.NewMailgun(domain, apiKey)
 
 	s1 := rand.NewSource(time.Now().UnixNano())
 	r1 := rand.New(s1)
-	sendName := getCommenterName(r1.Intn(26) + 1)
+	sendName := utils.GetCommenterName(r1.Intn(26) + 1)
 
 	m := mg.NewMessage(
 		"T大树洞"+" <"+sendName+"@"+sendName+".thuhole.com>",

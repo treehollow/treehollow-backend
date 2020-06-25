@@ -1,22 +1,22 @@
-package main
+package consts
 
-//const attentionMaxCount = 100
-const pageSize = 30
-const searchMaxPageSize = 50
-const searchMaxPage = 60
-const postMaxLength = 10000
-const commentMaxLength = 10000
-const reportMaxLength = 1000
-const imgMaxLength = 2000000
+//const AttentionMaxCount = 100
+const PageSize = 30
+const SearchMaxPageSize = 50
+const SearchMaxPage = 60
+const PostMaxLength = 10000
+const CommentMaxLength = 10000
+const ReportMaxLength = 1000
+const ImgMaxLength = 2000000
 const Base64Rate = 1.33333333
 
-const listenAddress = "127.0.0.1:3001"
-const logFile = "log.txt"
+const ListenAddress = "127.0.0.1:3001"
+const LogFile = "log.txt"
 
-const dzName = "洞主"
-const extraNamePrefix = "You Win "
+const DzName = "洞主"
+const ExtraNamePrefix = "You Win "
 
-var names0 = []string{
+var Names0 = []string{
 	"Angry",
 	"Baby",
 	"Crazy",
@@ -45,7 +45,7 @@ var names0 = []string{
 	"Zombie",
 }
 
-var names1 = []string{
+var Names1 = []string{
 	"Alice",
 	"Bob",
 	"Carol",

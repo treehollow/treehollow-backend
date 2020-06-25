@@ -1,4 +1,4 @@
-package main
+package utils
 
 import (
 	"crypto/rand"
@@ -13,10 +13,11 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"thuhole-go-backend/pkg/consts"
 	"time"
 )
 
-func genCode() string {
+func GenCode() string {
 	nBig, err := rand.Int(rand.Reader, big.NewInt(100000000))
 	if err != nil {
 		panic(err)
@@ -25,7 +26,7 @@ func genCode() string {
 	return fmt.Sprintf("%08d", n)
 }
 
-func genToken() string {
+func GenToken() string {
 	randomBytes := make([]byte, 20)
 	_, err := rand.Read(randomBytes)
 	if err != nil {
@@ -40,22 +41,22 @@ func hash1(user string) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-func hashEmail(user string) string {
+func HashEmail(user string) string {
 	return hash1(viper.GetString("salt") + hash1(user))
 }
 
-func getTimeStamp() int64 {
+func GetTimeStamp() int64 {
 	//loc, _ := time.LoadLocation("Asia/Shanghai")
 	return time.Now().Unix()
 }
 
-func fatalErrorHandle(err *error, msg string) {
+func FatalErrorHandle(err *error, msg string) {
 	if *err != nil {
 		panic(fmt.Errorf("Fatal error: %s \n %s \n", msg, *err))
 	}
 }
 
-func containsInt(s []int, e int) (int, bool) {
+func ContainsInt(s []int, e int) (int, bool) {
 	i := -1
 	for i, a := range s {
 		if a == e {
@@ -65,16 +66,16 @@ func containsInt(s []int, e int) (int, bool) {
 	return i, false
 }
 
-func getCommenterName(id int) string {
+func GetCommenterName(id int) string {
 	switch {
 	case id == 0:
-		return dzName
+		return consts.DzName
 	case id <= 26:
-		return names1[id-1]
+		return consts.Names1[id-1]
 	case id <= 26*27:
-		return names0[(id-1)/26-1] + " " + names1[(id-1)%26]
+		return consts.Names0[(id-1)/26-1] + " " + consts.Names1[(id-1)%26]
 	default:
-		return extraNamePrefix + strconv.Itoa(id-26*27)
+		return consts.ExtraNamePrefix + strconv.Itoa(id-26*27)
 	}
 }
 
@@ -102,7 +103,7 @@ func SplitToString(a []int, sep string) string {
 	return strings.Join(b, sep)
 }
 
-func getPinnedPids() []int {
+func GetPinnedPids() []int {
 	reg := regexp.MustCompile(`[ ,]`)
 	s := viper.GetString("pinned_pids")
 	var rtn []int
@@ -110,7 +111,7 @@ func getPinnedPids() []int {
 		if str != "" {
 			i, err := strconv.Atoi(str)
 			if err != nil {
-				fatalErrorHandle(&err, "pinned_pids Atoi error:"+str)
+				FatalErrorHandle(&err, "pinned_pids Atoi error:"+str)
 			}
 			rtn = append(rtn, i)
 		}
@@ -118,7 +119,7 @@ func getPinnedPids() []int {
 	return rtn
 }
 
-func getReportWhitelistPids() []int {
+func GetReportWhitelistPids() []int {
 	reg := regexp.MustCompile(`[ ,]`)
 	s := viper.GetString("report_whitelist_pids")
 	var rtn []int
@@ -126,7 +127,7 @@ func getReportWhitelistPids() []int {
 		if str != "" {
 			i, err := strconv.Atoi(str)
 			if err != nil {
-				fatalErrorHandle(&err, "report_whitelist_pids Atoi error:"+str)
+				FatalErrorHandle(&err, "report_whitelist_pids Atoi error:"+str)
 			}
 			rtn = append(rtn, i)
 		}
@@ -134,20 +135,20 @@ func getReportWhitelistPids() []int {
 	return rtn
 }
 
-func checkEmail(email string) bool {
+func CheckEmail(email string) bool {
 	// REF: https://html.spec.whatwg.org/multipage/input.html#valid-e-mail-address
 	var emailRegexp = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 	return emailRegexp.MatchString(email)
 }
 
-func httpReturnWithCodeOne(c *gin.Context, msg string) {
+func HttpReturnWithCodeOne(c *gin.Context, msg string) {
 	c.JSON(http.StatusOK, gin.H{
 		"code": 1,
 		"msg":  msg,
 	})
 }
 
-func safeSubSlice(slice []interface{}, low int, high int) []interface{} {
+func SafeSubSlice(slice []interface{}, low int, high int) []interface{} {
 	if 0 <= low && low <= high && high <= cap(slice) {
 		return slice[low:high]
 	}
