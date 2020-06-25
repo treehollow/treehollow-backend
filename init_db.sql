@@ -83,3 +83,9 @@ create table attentions
     INDEX (email_hash),
     CONSTRAINT pid_email UNIQUE (pid, email_hash)
 ) DEFAULT CHARSET = ascii;
+
+ALTER TABLE banned
+    ADD INDEX (timestamp);
+
+ALTER TABLE reports
+    ADD INDEX (timestamp);

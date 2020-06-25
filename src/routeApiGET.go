@@ -171,8 +171,9 @@ func searchPost(c *gin.Context) {
 	// Admin function
 	token := c.Query("user_token")
 	setTagRe := regexp.MustCompile(`^settag (.*) (pid|cid)=(\d+)$`)
-	if strings.Contains(viper.GetString("report_admin_tokens"), token) &&
-		len(token) == 32 && !strings.Contains(token, ",") && setTagRe.MatchString(keywords) {
+	isAdmin := strings.Contains(viper.GetString("report_admin_tokens"), token) &&
+		len(token) == 32 && !strings.Contains(token, ",")
+	if isAdmin && setTagRe.MatchString(keywords) {
 		strs := setTagRe.FindStringSubmatch(keywords)
 		tag := strs[1]
 		typ := strs[2]
@@ -202,9 +203,18 @@ func searchPost(c *gin.Context) {
 		}
 	}
 
-	data, err2 := dbSearchSavedPosts(strings.ReplaceAll(keywords, " ", " +"), (page-1)*pageSize, pageSize)
-	if err2 != nil {
-		log.Printf("dbSearchSavedPosts failed while searchList: %s\n", err2)
+	var data []interface{}
+	if isAdmin && keywords == "deleted" {
+		data, err = dbGetDeletedPosts((page-1)*pageSize, pageSize)
+	} else if isAdmin && keywords == "bans" {
+		data, err = dbGetBans((page-1)*pageSize, pageSize)
+	} else if isAdmin && keywords == "reports" {
+		data, err = dbGetReports((page-1)*pageSize, pageSize)
+	} else {
+		data, err = dbSearchSavedPosts(strings.ReplaceAll(keywords, " ", " +"), (page-1)*pageSize, pageSize)
+	}
+	if err != nil {
+		log.Printf("dbSearchSavedPosts or dbGetDeletedPosts failed while searchList: %s\n", err)
 		httpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
 		return
 	} else {

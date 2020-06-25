@@ -31,12 +31,15 @@ var addAttentionIns *sql.Stmt
 var removeAttentionIns *sql.Stmt
 var isAttentionOut *sql.Stmt
 var searchOut *sql.Stmt
+var deletedOut *sql.Stmt
 var hotPostsOut *sql.Stmt
 var bannedTimesOut *sql.Stmt
 var banIns *sql.Stmt
 var getBannedOut *sql.Stmt
 var setPostTagIns *sql.Stmt
 var setCommentTagIns *sql.Stmt
+var reportsOut *sql.Stmt
+var bansOut *sql.Stmt
 
 func initDb() {
 	var err error
@@ -91,6 +94,9 @@ func initDb() {
 	hotPostsOut, err = db.Prepare("SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum FROM posts WHERE pid>(SELECT MAX(pid)-1000 FROM posts) AND reportnum<10 ORDER BY likenum*3+replynum+timestamp/900-reportnum*10 DESC")
 	fatalErrorHandle(&err, "error preparing posts sql query")
 
+	deletedOut, err = db.Prepare("SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum FROM posts WHERE reportnum>=10 ORDER BY pid DESC LIMIT ?, ?")
+	fatalErrorHandle(&err, "error preparing posts sql query")
+
 	//COMMENTS
 	getCommentsOut, err = db.Prepare("SELECT cid, email_hash, text, tag, timestamp, name FROM comments WHERE pid=?")
 	fatalErrorHandle(&err, "error preparing comments sql query")
@@ -111,6 +117,9 @@ func initDb() {
 	doReportIns, err = db.Prepare("INSERT INTO reports (email_hash, pid, reason, timestamp) VALUES (?, ?, ?, ?)")
 	fatalErrorHandle(&err, "error preparing reports sql query")
 
+	reportsOut, err = db.Prepare("SELECT pid, reason, timestamp FROM reports ORDER BY timestamp DESC LIMIT ?, ?")
+	fatalErrorHandle(&err, "error preparing reports sql query")
+
 	//BANNED
 	bannedTimesOut, err = db.Prepare("SELECT COUNT(*) FROM banned WHERE email_hash=? AND expire_time>?")
 	fatalErrorHandle(&err, "error preparing banned sql query")
@@ -119,6 +128,9 @@ func initDb() {
 	fatalErrorHandle(&err, "error preparing banned sql query")
 
 	getBannedOut, err = db.Prepare("SELECT reason, timestamp, expire_time FROM banned WHERE email_hash=? ORDER BY timestamp DESC")
+	fatalErrorHandle(&err, "error preparing banned sql query")
+
+	bansOut, err = db.Prepare("SELECT reason, timestamp FROM banned ORDER BY timestamp DESC LIMIT ?, ?")
 	fatalErrorHandle(&err, "error preparing banned sql query")
 
 	//ATTENTIONS
@@ -185,9 +197,8 @@ func dbSaveBanUser(dzEmailHash string, reason string, interval int) error {
 	return err
 }
 
-func dbGetPostsByPidList(pids []int) ([]interface{}, error) {
+func parsePostsRows(rows *sql.Rows, err error) ([]interface{}, error) {
 	var rtn []interface{}
-	rows, err := db.Query("SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum FROM posts WHERE pid IN (" + SplitToString(pids, ",") + ") AND reportnum<10 ORDER BY pid DESC")
 	if err != nil {
 		return nil, err
 	}
@@ -208,6 +219,90 @@ func dbGetPostsByPidList(pids []int) ([]interface{}, error) {
 			"likenum":   likenum,
 			"url":       filePath,
 			"tag":       IfThenElse(len(tag) != 0, tag, nil),
+		})
+	}
+	err = rows.Err()
+	if err != nil {
+		return nil, err
+	}
+	return rtn, nil
+}
+
+func dbGetPostsByPidList(pids []int) ([]interface{}, error) {
+	rows, err := db.Query("SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum FROM posts WHERE pid IN (" + SplitToString(pids, ",") + ") AND reportnum<10 ORDER BY pid DESC")
+	return parsePostsRows(rows, err)
+}
+
+func dbGetHotPosts() ([]interface{}, error) {
+	rows, err := hotPostsOut.Query()
+	return parsePostsRows(rows, err)
+}
+
+func dbSearchSavedPosts(str string, limitMin int, searchPageSize int) ([]interface{}, error) {
+	rows, err := searchOut.Query(str, limitMin, searchPageSize)
+	return parsePostsRows(rows, err)
+}
+
+func dbGetDeletedPosts(limitMin int, searchPageSize int) ([]interface{}, error) {
+	rows, err := deletedOut.Query(limitMin, searchPageSize)
+	return parsePostsRows(rows, err)
+}
+
+func dbGetReports(limitMin int, searchPageSize int) ([]interface{}, error) {
+	var rtn []interface{}
+	rows, err := reportsOut.Query(limitMin, searchPageSize)
+	if err != nil {
+		return nil, err
+	}
+
+	var reason string
+	var pid, timestamp int
+	for rows.Next() {
+		err := rows.Scan(&pid, &reason, &timestamp)
+		if err != nil {
+			log.Fatal(err)
+		}
+		rtn = append(rtn, gin.H{
+			"pid":       pid,
+			"text":      reason,
+			"type":      "text",
+			"timestamp": timestamp,
+			"reply":     0,
+			"likenum":   0,
+			"url":       "",
+			"tag":       nil,
+		})
+	}
+	err = rows.Err()
+	if err != nil {
+		return nil, err
+	}
+	return rtn, nil
+}
+
+func dbGetBans(limitMin int, searchPageSize int) ([]interface{}, error) {
+	var rtn []interface{}
+	rows, err := bansOut.Query(limitMin, searchPageSize)
+	if err != nil {
+		return nil, err
+	}
+
+	var reason string
+	var timestamp int
+	for rows.Next() {
+		err := rows.Scan(&reason, &timestamp)
+		if err != nil {
+			log.Fatal(err)
+		}
+		rtn = append(rtn, gin.H{
+			"pid":       0,
+			"text":      reason,
+			"type":      "text",
+			"timestamp": timestamp,
+			"reply":     0,
+			"likenum":   0,
+			"url":       "",
+			"tag":       nil,
 		})
 	}
 	err = rows.Err()
@@ -282,70 +377,6 @@ func dbGetBannedMsgs(emailHash string) ([]interface{}, error) {
 			"timestamp": 0,
 			"title":     "提示",
 		})
-	}
-	return rtn, nil
-}
-
-func dbSearchSavedPosts(str string, limitMin int, searchPageSize int) ([]interface{}, error) {
-	var rtn []interface{}
-	rows, err := searchOut.Query(str, limitMin, searchPageSize)
-	if err != nil {
-		return nil, err
-	}
-
-	var emailHash, text, tag, typ, filePath string
-	var timestamp, pid, likenum, replynum int
-	for rows.Next() {
-		err := rows.Scan(&pid, &emailHash, &text, &timestamp, &tag, &typ, &filePath, &likenum, &replynum)
-		if err != nil {
-			log.Fatal(err)
-		}
-		rtn = append(rtn, gin.H{
-			"pid":       pid,
-			"text":      text,
-			"type":      typ,
-			"timestamp": timestamp,
-			"reply":     replynum,
-			"likenum":   likenum,
-			"url":       filePath,
-			"tag":       IfThenElse(len(tag) != 0, tag, nil),
-		})
-	}
-	err = rows.Err()
-	if err != nil {
-		return nil, err
-	}
-	return rtn, nil
-}
-
-func dbGetHotPosts() ([]interface{}, error) {
-	var rtn []interface{}
-	rows, err := hotPostsOut.Query()
-	if err != nil {
-		return nil, err
-	}
-
-	var emailHash, text, tag, typ, filePath string
-	var timestamp, pid, likenum, replynum int
-	for rows.Next() {
-		err := rows.Scan(&pid, &emailHash, &text, &timestamp, &tag, &typ, &filePath, &likenum, &replynum)
-		if err != nil {
-			log.Fatal(err)
-		}
-		rtn = append(rtn, gin.H{
-			"pid":       pid,
-			"text":      text,
-			"type":      typ,
-			"timestamp": timestamp,
-			"reply":     replynum,
-			"likenum":   likenum,
-			"url":       filePath,
-			"tag":       IfThenElse(len(tag) != 0, tag, nil),
-		})
-	}
-	err = rows.Err()
-	if err != nil {
-		return nil, err
 	}
 	return rtn, nil
 }
