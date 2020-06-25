@@ -26,14 +26,17 @@ func migrate() {
 		err2 = rows.Scan(&emailHash, &s)
 		fatalErrorHandle(&err2, "failed step 2.1!")
 		pids := hexToIntSlice(s)
+		inserts = []string{}
 		for _, pid := range pids {
 			if pid <= maxPid {
 				inserts = append(inserts, "("+emailHash+","+strconv.Itoa(pid)+")")
 			}
 		}
-		query := "INSERT INTO attentions(email_hash, pid) VALUES " + strings.Join(inserts, ",")
-		_, err4 := db2.Exec(query)
-		fatalErrorHandle(&err4, "failed step 2.2!")
+		if len(inserts) > 0 {
+			query := "INSERT INTO attentions(email_hash, pid) VALUES " + strings.Join(inserts, ",")
+			_, err4 := db2.Exec(query)
+			fatalErrorHandle(&err4, "failed step 2.2!")
+		}
 	}
 	fmt.Println("migrate success!")
 }
