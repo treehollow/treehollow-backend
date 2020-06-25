@@ -201,7 +201,7 @@ func doReport(c *gin.Context) {
 			}
 			bannedTimes, _ := dbBannedTimesPost(dzEmailHash, -1)
 			err = dbSaveBanUser(dzEmailHash,
-				"您的"+typ+"树洞#"+strconv.Itoa(pid)+text+"\n被管理员删除。管理员的删除理由是：【"+reason+"】。这是您第"+
+				"您的"+typ+"树洞#"+strconv.Itoa(pid)+"\n\""+text+"\"\n被管理员删除。管理员的删除理由是：【"+reason+"】。这是您第"+
 					strconv.Itoa(bannedTimes+1)+"次被举报，在"+strconv.Itoa(bannedTimes+1)+"天之内您将无法发布树洞。",
 				(1+bannedTimes)*86400)
 			if err != nil {
@@ -216,7 +216,7 @@ func doReport(c *gin.Context) {
 				//禁言
 				bannedTimes, _ := dbBannedTimesPost(dzEmailHash, -1)
 				err = dbSaveBanUser(dzEmailHash,
-					"您的"+typ+"树洞#"+strconv.Itoa(pid)+text+"\n由于用户举报过多被删除。这是您第"+
+					"您的"+typ+"树洞#"+strconv.Itoa(pid)+"\n\""+text+"\"\n由于用户举报过多被删除。这是您第"+
 						strconv.Itoa(bannedTimes+1)+"次被举报，在"+strconv.Itoa(bannedTimes+1)+"天之内您将无法发布树洞。",
 					(1+bannedTimes)*86400)
 				if err != nil {
