@@ -55,36 +55,6 @@ func fatalErrorHandle(err *error, msg string) {
 	}
 }
 
-func charToInt(c int) int {
-	if c <= '9' {
-		return c - int('0')
-	} else {
-		return c - int('a') + 10
-	}
-}
-
-func hexToIntSlice(str string) []int {
-	rtn := make([]int, len(str)/8)
-
-	res := int(0)
-	for i, r := range str {
-		res = res + charToInt(int(r))<<(4*(7-(i%8)))
-		if (i+1)%8 == 0 {
-			rtn[i/8] = res
-			res = 0
-		}
-	}
-	return rtn
-}
-
-func intSliceToHex(array []int) string {
-	var rtn string
-	for _, n := range array {
-		rtn += fmt.Sprintf("%08x", n)
-	}
-	return rtn
-}
-
 func containsInt(s []int, e int) (int, bool) {
 	i := -1
 	for i, a := range s {
@@ -108,10 +78,10 @@ func getCommenterName(id int) string {
 	}
 }
 
-func remove(s []int, i int) []int {
-	s[len(s)-1], s[i] = s[i], s[len(s)-1]
-	return s[:len(s)-1]
-}
+//func remove(s []int, i int) []int {
+//	s[len(s)-1], s[i] = s[i], s[len(s)-1]
+//	return s[:len(s)-1]
+//}
 
 func IfThenElse(condition bool, a interface{}, b interface{}) interface{} {
 	if condition {

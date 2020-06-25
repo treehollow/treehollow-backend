@@ -30,9 +30,9 @@ func sendCode(c *gin.Context) {
 	}
 	now := getTimeStamp()
 	_, timeStamp, err := dbGetCode(hashedUser)
-	if err != nil {
-		log.Printf("dbGetCode failed when sendCode: %s\n", err)
-	}
+	//if err != nil {
+	//	log.Printf("dbGetCode failed when sendCode: %s\n", err)
+	//}
 	if now-timeStamp < 600 {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -103,6 +103,7 @@ func login(c *gin.Context) {
 	token := genToken()
 	err = dbSaveToken(token, hashedUser)
 	if err != nil {
+		log.Printf("failed dbSaveToken while login, %s\n", err)
 		c.JSON(http.StatusOK, gin.H{
 			"code": 1,
 			"msg":  "数据库写入失败，请联系管理员",
@@ -121,7 +122,7 @@ func login(c *gin.Context) {
 func systemMsg(c *gin.Context) {
 	c.Header("Content-Type", "application/json; charset=utf-8")
 	token := c.Query("user_token")
-	_, emailHash, err := dbGetInfoByToken(token)
+	emailHash, err := dbGetInfoByToken(token)
 	if err == nil {
 		data, err2 := dbGetBannedMsgs(emailHash)
 		if err2 != nil {

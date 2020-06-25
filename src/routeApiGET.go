@@ -50,12 +50,9 @@ func getComment(c *gin.Context) {
 	token := c.Query("user_token")
 	attention := 0
 	if len(token) == 32 {
-		s, _, err := dbGetInfoByToken(token)
+		emailHash, err := dbGetInfoByToken(token)
 		if err == nil {
-			pids := hexToIntSlice(s)
-			if _, ok := containsInt(pids, pid); ok {
-				attention = 1
-			}
+			attention, _ = dbIsAttention(emailHash, pid)
 		}
 	}
 	data, err2 := dbGetSavedComments(pid)
@@ -223,7 +220,7 @@ func searchPost(c *gin.Context) {
 
 func getAttention(c *gin.Context) {
 	token := c.Query("user_token")
-	attentions, _, err := dbGetInfoByToken(token)
+	emailHash, err := dbGetInfoByToken(token)
 
 	if err != nil {
 		log.Printf("dbGetInfoByToken failed: %s\n", err)
@@ -231,14 +228,10 @@ func getAttention(c *gin.Context) {
 		return
 	}
 
-	pids := hexToIntSlice(attentions)
-	if len(pids) == 0 {
-		c.JSON(http.StatusOK, gin.H{
-			"code":      0,
-			"data":      []string{},
-			"timestamp": getTimeStamp(),
-			"count":     0,
-		})
+	pids, err3 := dbGetAttentionPids(emailHash)
+	if err3 != nil {
+		log.Printf("dbGetAttentionPids failed while getAttention: %s\n", err3)
+		httpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
 		return
 	}
 	data, err2 := dbGetPostsByPidList(pids)

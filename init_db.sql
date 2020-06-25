@@ -8,6 +8,9 @@ create table user_info
     INDEX (token)
 ) DEFAULT CHARSET = ascii;
 
+ALTER TABLE user_info
+    DROP attentions;
+
 create table verification_codes
 (
     email_hash CHAR(64)    NOT NULL,
@@ -30,6 +33,12 @@ create table posts
     PRIMARY KEY (pid)
 ) DEFAULT CHARSET = utf8mb4;
 
+ALTER TABLE posts
+    ADD COLUMN reportnum INT DEFAULT 0 AFTER replynum;
+
+ALTER TABLE posts
+    ADD FULLTEXT INDEX (text) WITH PARSER ngram;
+
 create table comments
 (
     cid        INT            NOT NULL AUTO_INCREMENT,
@@ -43,9 +52,6 @@ create table comments
     INDEX (pid)
 ) DEFAULT CHARSET = utf8mb4;
 
-ALTER TABLE posts
-    ADD FULLTEXT INDEX (text) WITH PARSER ngram;
-
 create table reports
 (
     rid        INT            NOT NULL AUTO_INCREMENT,
@@ -58,9 +64,6 @@ create table reports
     INDEX (pid)
 ) DEFAULT CHARSET = utf8mb4;
 
-ALTER TABLE posts
-    ADD COLUMN reportnum INT DEFAULT 0 AFTER replynum;
-
 create table banned
 (
     email_hash  CHAR(64)       NOT NULL,
@@ -69,3 +72,11 @@ create table banned
     expire_time INT            NOT NULL,
     INDEX (email_hash)
 ) DEFAULT CHARSET = utf8mb4;
+
+create table attentions
+(
+    email_hash CHAR(64) NOT NULL,
+    pid        INT      NOT NULL,
+    INDEX (email_hash),
+    CONSTRAINT pid_email UNIQUE (pid, email_hash)
+) DEFAULT CHARSET = ascii;

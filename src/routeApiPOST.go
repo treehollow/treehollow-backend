@@ -30,18 +30,13 @@ func doPost(c *gin.Context) {
 		return
 	}
 
-	_, emailHash, err3 := dbGetInfoByToken(token)
+	emailHash, err3 := dbGetInfoByToken(token)
 	if err3 != nil {
 		httpReturnWithCodeOne(c, "发送失败，请检查登录状态")
 		return
 	}
 	timestamp := int(getTimeStamp())
-	bannedTimes, err4 := dbBannedTimesPost(emailHash, timestamp)
-	if err4 != nil {
-		log.Printf("error dbBannedTimesPost while doPost: %s\n", err4)
-		httpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
-		return
-	}
+	bannedTimes, _ := dbBannedTimesPost(emailHash, timestamp)
 	if bannedTimes > 0 {
 		httpReturnWithCodeOne(c, "很抱歉，您当前处于禁言状态，无法发送树洞。")
 		return
@@ -52,16 +47,16 @@ func doPost(c *gin.Context) {
 	var imgPath string
 	if typ == "image" {
 		imgPath = genToken()
-		pid, err = dbSavePost(token, text, "", typ, imgPath+".jpeg")
+		pid, err = dbSavePost(emailHash, text, "", typ, imgPath+".jpeg")
 	} else {
-		pid, err = dbSavePost(token, text, "", typ, "")
+		pid, err = dbSavePost(emailHash, text, "", typ, "")
 	}
 
 	if err != nil {
 		log.Printf("error dbSavePost! %s\n", err)
 		c.JSON(http.StatusOK, gin.H{
 			"code": 1,
-			"msg":  "发送失败，请检查登录状态",
+			"msg":  "数据库写入失败，请联系管理员",
 		})
 		return
 	} else {
@@ -87,10 +82,8 @@ func doPost(c *gin.Context) {
 			"code": 0,
 			"data": pid,
 		})
-		_, err = addAttention(token, pid)
-		if err != nil {
-			log.Printf("error add attention while sending post! %s\n", err)
-		}
+		_, _ = addAttentionIns.Exec(emailHash, pid)
+		_, _ = plusOneAttentionIns.Exec(pid)
 		return
 	}
 }
@@ -110,18 +103,13 @@ func doComment(c *gin.Context) {
 		return
 	}
 	token := c.PostForm("user_token")
-	s, emailHash, err5 := dbGetInfoByToken(token)
+	emailHash, err5 := dbGetInfoByToken(token)
 	if err5 != nil {
 		httpReturnWithCodeOne(c, "发送失败，请检查登录状态")
 		return
 	}
 	timestamp := int(getTimeStamp())
-	bannedTimes, err4 := dbBannedTimesPost(emailHash, timestamp)
-	if err4 != nil {
-		log.Printf("error dbBannedTimesPost while doPost: %s\n", err4)
-		httpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
-		return
-	}
+	bannedTimes, _ := dbBannedTimesPost(emailHash, timestamp)
 	if bannedTimes > 0 {
 		httpReturnWithCodeOne(c, "很抱歉，您当前处于禁言状态，无法发送评论。")
 		return
@@ -137,7 +125,7 @@ func doComment(c *gin.Context) {
 	if dzEmailHash == emailHash {
 		name = dzName
 	} else {
-		name, err = dbGetCommentNameByToken(token, pid)
+		name, err = dbGetCommentNameByEmailHash(emailHash, pid)
 		if err != nil { // token is not in comments
 			var i int
 			i, err = dbGetCommentCount(pid, dzEmailHash)
@@ -151,7 +139,7 @@ func doComment(c *gin.Context) {
 			name = getCommenterName(i + 1)
 		}
 	}
-	_, err = dbSaveComment(token, text, "", pid, name)
+	_, err = dbSaveComment(emailHash, text, "", pid, name)
 	if err != nil {
 		httpReturnWithCodeOne(c, "数据库写入失败，请联系管理员")
 		return
@@ -165,9 +153,10 @@ func doComment(c *gin.Context) {
 		if err != nil {
 			log.Printf("error plusOneCommentIns while commenting: %s\n", err)
 		}
-		_, err = addAttention2(s, token, pid)
-		if err != nil {
-			log.Printf("error addAttention2 while commenting: %s\n", err)
+		isAttention, err := dbIsAttention(emailHash, pid)
+		if err == nil && isAttention == 0 {
+			_, _ = addAttentionIns.Exec(emailHash, pid)
+			_, _ = plusOneAttentionIns.Exec(pid)
 		}
 	}
 }
@@ -195,7 +184,12 @@ func doReport(c *gin.Context) {
 		httpReturnWithCodeOne(c, "举报失败，pid不存在")
 		return
 	}
-	_, err = dbSaveReport(token, reason, pid)
+	emailHash, err5 := dbGetInfoByToken(token)
+	if err5 != nil {
+		httpReturnWithCodeOne(c, "举报失败，请检查登录状态")
+		return
+	}
+	_, err = dbSaveReport(emailHash, reason, pid)
 	if err != nil {
 		httpReturnWithCodeOne(c, "举报失败")
 		return
@@ -205,10 +199,7 @@ func doReport(c *gin.Context) {
 			if err != nil {
 				log.Printf("error plus666ReportIns while reporting: %s\n", err)
 			}
-			bannedTimes, err3 := dbBannedTimesPost(dzEmailHash, -1)
-			if err3 != nil {
-				log.Printf("error dbBannedTimesPost while reporting: %s\n", err)
-			}
+			bannedTimes, _ := dbBannedTimesPost(dzEmailHash, -1)
 			err = dbSaveBanUser(dzEmailHash,
 				"您的树洞#"+strconv.Itoa(pid)+"被管理员删除。管理员的删除理由是：【"+reason+"】。这是您第"+
 					strconv.Itoa(bannedTimes+1)+"次被举报，在"+strconv.Itoa(bannedTimes+1)+"天之内您将无法发布树洞。",
@@ -223,10 +214,7 @@ func doReport(c *gin.Context) {
 			}
 			if reportnum == 9 {
 				//禁言
-				bannedTimes, err3 := dbBannedTimesPost(dzEmailHash, -1)
-				if err3 != nil {
-					log.Printf("error dbBannedTimesPost while reporting: %s\n", err)
-				}
+				bannedTimes, _ := dbBannedTimesPost(dzEmailHash, -1)
 				err = dbSaveBanUser(dzEmailHash,
 					"您的树洞#"+strconv.Itoa(pid)+"由于用户举报过多被删除。这是您第"+
 						strconv.Itoa(bannedTimes+1)+"次被举报，在"+strconv.Itoa(bannedTimes+1)+"天之内您将无法发布树洞。",
@@ -254,26 +242,44 @@ func doAttention(c *gin.Context) {
 		httpReturnWithCodeOne(c, "关注操作失败，pid不合法")
 		return
 	}
+	_, _, _, _, _, _, _, _, _, err3 := dbGetOnePost(pid)
+	if err3 != nil {
+		httpReturnWithCodeOne(c, "关注失败，pid不存在")
+		return
+	}
 	s := c.PostForm("switch")
 	token := c.PostForm("user_token")
-	var success bool
-	if s == "1" {
-		success, err = addAttention(token, pid)
-	} else {
-		success, err = removeAttention(token, pid)
-	}
-	if err != nil {
-		httpReturnWithCodeOne(c, "关注操作失败，请检查登录状态")
-		return
-	} else if !success {
-		httpReturnWithCodeOne(c, "关注操作失败，重复操作")
-		return
-	} else {
-		c.JSON(http.StatusOK, gin.H{
-			"code": 0,
-		})
+	emailHash, err5 := dbGetInfoByToken(token)
+	if err5 != nil {
+		httpReturnWithCodeOne(c, "举报失败，请检查登录状态")
 		return
 	}
+	isAttention, err2 := dbIsAttention(emailHash, pid)
+	if err2 != nil {
+		log.Printf("error dbIsAttention while doAttention: %s\n", err2)
+		httpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
+		return
+	}
+	if isAttention == 0 && s == "0" {
+		httpReturnWithCodeOne(c, "您已经取消关注了")
+		return
+	}
+	if isAttention == 1 && s == "1" {
+		httpReturnWithCodeOne(c, "您已经关注过了")
+		return
+	}
+	if isAttention == 0 {
+		_, _ = addAttentionIns.Exec(emailHash, pid)
+		_, _ = plusOneAttentionIns.Exec(pid)
+	}
+	if isAttention == 1 {
+		_, _ = removeAttentionIns.Exec(emailHash, pid)
+		_, _ = minusOneAttentionIns.Exec(pid)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code": 0,
+	})
 }
 
 func apiPost(c *gin.Context) {

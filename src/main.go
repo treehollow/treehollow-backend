@@ -21,7 +21,7 @@ func main() {
 	c := cron.New()
 	_, _ = c.AddFunc("*/1 * * * *", func() {
 		hotPosts, err = dbGetHotPosts()
-		log.Println("refreshed hotPosts ,err=", err)
+		//log.Println("refreshed hotPosts ,err=", err)
 	})
 	c.Start()
 
