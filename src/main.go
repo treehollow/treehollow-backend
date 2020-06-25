@@ -38,6 +38,8 @@ func migrate() {
 			fatalErrorHandle(&err4, "failed step 2.2!")
 		}
 	}
+	_, err6 := db.Exec("ALTER TABLE user_info  DROP attentions;")
+	fatalErrorHandle(&err6, "failed step 3!")
 	fmt.Println("migrate success!")
 }
 

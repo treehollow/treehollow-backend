@@ -77,3 +77,6 @@ create table attentions
     INDEX (email_hash),
     CONSTRAINT pid_email UNIQUE (pid, email_hash)
 ) DEFAULT CHARSET = ascii;
+
+ALTER TABLE user_info
+    DROP attentions;
