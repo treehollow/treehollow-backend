@@ -1,5 +1,7 @@
 # thuhole-go-backend
 
+[![Build Status](https://travis-ci.com/thuhole/thuhole-go-backend.svg?branch=master)](https://travis-ci.com/thuhole/thuhole-go-backend)
+
 [T大树洞](https://thuhole.com/) 的Golang后端。
 
 MySQL使用[./init_db.sql](./init_db.sql)初始化。
