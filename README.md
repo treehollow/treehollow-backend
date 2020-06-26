@@ -21,9 +21,10 @@ go build
 - `report_whitelist_pids`: 不允许举报的树洞号
 - `report_admin_tokens`: 管理员的tokens，管理员举报树洞=直接禁言
 - `bannedEmailHashed`: 被封禁的邮箱哈希值列表
-- `mailgun_key`: 邮件服务mailgun的API Key
-- `mailgun_domain`: 邮件服务mailgun的domain
 - `is_debug`: 是否启用debug模式
+- `smtp_username`: 邮箱服务username
+- `smtp_password`: 邮箱服务password
+- `smtp_host`: 邮箱服务host
 
 当后端程序运行时编辑`config.json`可以热加载，不需要重启程序。
 
@@ -35,7 +36,7 @@ go build
 - 此程序
 - MySQL数据库。使用[./init_db.sql](./init_db.sql)初始化。
 - Nginx。使得`config.json`中`images_path`文件夹里的图片文件在网页上可访问到。
-- 邮件服务。此处使用了Mailgun服务用于发送验证码邮件。在[./pkg/mail/mail.go](./pkg/mail/mail.go)中还提供了使用SMTP接口的方式。
+- 邮件服务。
 
 ## License
 [GPL v3](./LICENSE)

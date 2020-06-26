@@ -45,12 +45,12 @@ func sendCode(c *gin.Context) {
 		return
 	}
 
-	_, err = mail.SendMail(code, user)
+	err = mail.SendMail(code, user)
 	if err != nil {
 		log.Printf("send mail to %s failed: %s\n", user, err)
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"msg":     "验证码邮件发送失败。现阶段暂时每小时开放注册100个账户。",
+			"msg":     "验证码邮件发送失败。",
 		})
 		return
 	}
@@ -67,7 +67,7 @@ func sendCode(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
-		"msg":     "验证码发送成功，有效期【12小时】。由于清华邮箱的审查系统，验证码可能需要较长时间才能收到，不要多次发送验证码。请记得查看垃圾邮件。",
+		"msg":     "验证码发送成功，验证码有效期【12小时】。如果要在多客户端登录请不要使用邮件登录而是Token登录。不要多次发送验证码，请记得查看垃圾邮件。",
 	})
 }
 

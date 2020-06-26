@@ -1,12 +1,13 @@
 {
   "salt": "",
-  "images_path": "/tmp/",
+  "images_path": "/path/to/your/nginx/images/folder",
   "sql_source": "username:pass@tcp(127.0.0.1:3306)/database",
   "pinned_pids": "1,23",
   "report_whitelist_pids": "1,23",
-  "report_admin_tokens": "adsfadsf,adfadsf",
-  "bannedEmailHashed": "adsfadsf,adfadsf",
-  "mailgun_key": "xxx",
-  "mailgun_domain": "mail.thuhole.com",
-  "is_debug": true
+  "report_admin_tokens": "TOKEN1,TOKEN2",
+  "bannedEmailHashed": "HASH1,HASH2,HASH3",
+  "is_debug": true,
+  "smtp_username": "alice@mails.thuhole.com",
+  "smtp_password": "YOUR_PASSWORD",
+  "smtp_host": "smtpdm.aliyun.com"
 }
