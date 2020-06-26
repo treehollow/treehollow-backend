@@ -22,7 +22,7 @@ func doPost(c *gin.Context) {
 	if len(text) > consts.PostMaxLength {
 		utils.HttpReturnWithCodeOne(c, "字数过长！字数限制为"+strconv.Itoa(consts.PostMaxLength)+"字。")
 		return
-	} else if len(text) == 0 {
+	} else if len(text) == 0 && typ == "text" {
 		utils.HttpReturnWithCodeOne(c, "请输入内容")
 		return
 	} else if typ != "text" && typ != "image" {
