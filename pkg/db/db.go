@@ -182,7 +182,7 @@ func GetOnePost(pid int) (string, string, int, string, string, string, int, int,
 	var emailHash, text, tag, typ, filePath string
 	var timestamp, likenum, replynum, reportnum int
 	err := getOnePostOut.QueryRow(pid).Scan(&emailHash, &text, &timestamp, &tag, &typ, &filePath, &likenum, &replynum, &reportnum)
-	if reportnum >= 5 && tag == "" {
+	if reportnum >= 3 && reportnum < 10 && tag == "" {
 		tag = "用户举报较多"
 	}
 	return emailHash, text, timestamp, tag, typ, filePath, likenum, replynum, reportnum, err
@@ -214,7 +214,7 @@ func parsePostsRows(rows *sql.Rows, err error) ([]interface{}, error) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		if reportnum >= 5 && tag == "" {
+		if reportnum >= 3 && reportnum < 10 && tag == "" {
 			tag = "用户举报较多"
 		}
 		rtn = append(rtn, gin.H{
@@ -335,7 +335,7 @@ func GetSavedPosts(pidMin int, pidMax int) ([]interface{}, error) {
 			log.Fatal(err)
 		}
 		if _, ok := utils.ContainsInt(pinnedPids, pid); !ok {
-			if reportnum >= 5 && tag == "" {
+			if reportnum >= 3 && reportnum < 10 && tag == "" {
 				tag = "用户举报较多"
 			}
 			rtn = append(rtn, gin.H{
