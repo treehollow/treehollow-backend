@@ -4,9 +4,7 @@
 
 [T大树洞](https://thuhole.com/) 的Golang后端。
 
-MySQL使用[./init_db.sql](./init_db.sql)初始化。
-
-## 构建方式
+## 安装方式
 ```bash
 git clone https://github.com/thuhole/thuhole-go-backend
 cd thuhole-go-backend
@@ -30,6 +28,14 @@ go build
 当后端程序运行时编辑`config.json`可以热加载，不需要重启程序。
 
 [./fallback_server/main.go](./fallback_server/main.go)是一个非常简易的显示维护信息的小程序。可以使用Nginx配置为fallback server.
+
+## 部署方式
+
+部署一个后端需要使用以下服务：
+- 此程序
+- MySQL数据库。使用[./init_db.sql](./init_db.sql)初始化。
+- Nginx。使得`config.json`中`images_path`文件夹里的图片文件在网页上可访问到。
+- 邮件服务。此处使用了Mailgun服务用于发送验证码邮件。在[./pkg/mail/mail.go](./pkg/mail/mail.go)中还提供了使用SMTP接口的方式。
 
 ## License
 [GPL v3](./LICENSE)
