@@ -33,13 +33,13 @@ func doPost(c *gin.Context) {
 		return
 	}
 
-	emailHash, err3 := db.DbGetInfoByToken(token)
+	emailHash, err3 := db.GetInfoByToken(token)
 	if err3 != nil {
 		utils.HttpReturnWithCodeOne(c, "发送失败，请检查登录状态")
 		return
 	}
 	timestamp := int(utils.GetTimeStamp())
-	bannedTimes, _ := db.DbBannedTimesPost(emailHash, timestamp)
+	bannedTimes, _ := db.BannedTimesPost(emailHash, timestamp)
 	if bannedTimes > 0 {
 		utils.HttpReturnWithCodeOne(c, "很抱歉，您当前处于禁言状态，无法发送树洞。")
 		return
@@ -50,9 +50,9 @@ func doPost(c *gin.Context) {
 	var imgPath string
 	if typ == "image" {
 		imgPath = utils.GenToken()
-		pid, err = db.DbSavePost(emailHash, text, "", typ, imgPath+".jpeg")
+		pid, err = db.SavePost(emailHash, text, "", typ, imgPath+".jpeg")
 	} else {
-		pid, err = db.DbSavePost(emailHash, text, "", typ, "")
+		pid, err = db.SavePost(emailHash, text, "", typ, "")
 	}
 
 	if err != nil {
@@ -106,19 +106,19 @@ func doComment(c *gin.Context) {
 		return
 	}
 	token := c.PostForm("user_token")
-	emailHash, err5 := db.DbGetInfoByToken(token)
+	emailHash, err5 := db.GetInfoByToken(token)
 	if err5 != nil {
 		utils.HttpReturnWithCodeOne(c, "发送失败，请检查登录状态")
 		return
 	}
 	timestamp := int(utils.GetTimeStamp())
-	bannedTimes, _ := db.DbBannedTimesPost(emailHash, timestamp)
+	bannedTimes, _ := db.BannedTimesPost(emailHash, timestamp)
 	if bannedTimes > 0 {
 		utils.HttpReturnWithCodeOne(c, "很抱歉，您当前处于禁言状态，无法发送评论。")
 		return
 	}
 	var dzEmailHash string
-	dzEmailHash, _, _, _, _, _, _, _, _, err = db.DbGetOnePost(pid)
+	dzEmailHash, _, _, _, _, _, _, _, _, err = db.GetOnePost(pid)
 	if err != nil {
 		utils.HttpReturnWithCodeOne(c, "发送失败，pid不存在")
 		return
@@ -128,10 +128,10 @@ func doComment(c *gin.Context) {
 	if dzEmailHash == emailHash {
 		name = consts.DzName
 	} else {
-		name, err = db.DbGetCommentNameByEmailHash(emailHash, pid)
+		name, err = db.GetCommentNameByEmailHash(emailHash, pid)
 		if err != nil { // token is not in comments
 			var i int
-			i, err = db.DbGetCommentCount(pid, dzEmailHash)
+			i, err = db.GetCommentCount(pid, dzEmailHash)
 			if err != nil {
 				c.JSON(http.StatusOK, gin.H{
 					"code": 1,
@@ -142,7 +142,7 @@ func doComment(c *gin.Context) {
 			name = utils.GetCommenterName(i + 1)
 		}
 	}
-	_, err = db.DbSaveComment(emailHash, text, "", pid, name)
+	_, err = db.SaveComment(emailHash, text, "", pid, name)
 	if err != nil {
 		utils.HttpReturnWithCodeOne(c, "数据库写入失败，请联系管理员")
 		return
@@ -156,7 +156,7 @@ func doComment(c *gin.Context) {
 		if err != nil {
 			log.Printf("error plusOneCommentIns while commenting: %s\n", err)
 		}
-		isAttention, err := db.DbIsAttention(emailHash, pid)
+		isAttention, err := db.IsAttention(emailHash, pid)
 		if err == nil && isAttention == 0 {
 			_, _ = db.AddAttentionIns.Exec(emailHash, pid)
 			_, _ = db.PlusOneAttentionIns.Exec(pid)
@@ -182,17 +182,17 @@ func doReport(c *gin.Context) {
 		return
 	}
 	token := c.PostForm("user_token")
-	dzEmailHash, text, _, _, typ, _, _, _, reportnum, err2 := db.DbGetOnePost(pid)
+	dzEmailHash, text, _, _, typ, _, _, _, reportnum, err2 := db.GetOnePost(pid)
 	if err2 != nil {
 		utils.HttpReturnWithCodeOne(c, "举报失败，pid不存在")
 		return
 	}
-	emailHash, err5 := db.DbGetInfoByToken(token)
+	emailHash, err5 := db.GetInfoByToken(token)
 	if err5 != nil {
 		utils.HttpReturnWithCodeOne(c, "举报失败，请检查登录状态")
 		return
 	}
-	_, err = db.DbSaveReport(emailHash, reason, pid)
+	_, err = db.SaveReport(emailHash, reason, pid)
 	if err != nil {
 		utils.HttpReturnWithCodeOne(c, "举报失败")
 		return
@@ -202,8 +202,8 @@ func doReport(c *gin.Context) {
 			if err != nil {
 				log.Printf("error plus666ReportIns while reporting: %s\n", err)
 			}
-			bannedTimes, _ := db.DbBannedTimesPost(dzEmailHash, -1)
-			err = db.DbSaveBanUser(dzEmailHash,
+			bannedTimes, _ := db.BannedTimesPost(dzEmailHash, -1)
+			err = db.SaveBanUser(dzEmailHash,
 				"您的"+typ+"树洞#"+strconv.Itoa(pid)+"\n\""+text+"\"\n被管理员删除。管理员的删除理由是：【"+reason+"】。这是您第"+
 					strconv.Itoa(bannedTimes+1)+"次被举报，在"+strconv.Itoa(bannedTimes+1)+"天之内您将无法发布树洞。",
 				(1+bannedTimes)*86400)
@@ -217,8 +217,8 @@ func doReport(c *gin.Context) {
 			}
 			if reportnum == 9 {
 				//禁言
-				bannedTimes, _ := db.DbBannedTimesPost(dzEmailHash, -1)
-				err = db.DbSaveBanUser(dzEmailHash,
+				bannedTimes, _ := db.BannedTimesPost(dzEmailHash, -1)
+				err = db.SaveBanUser(dzEmailHash,
 					"您的"+typ+"树洞#"+strconv.Itoa(pid)+"\n\""+text+"\"\n由于用户举报过多被删除。这是您第"+
 						strconv.Itoa(bannedTimes+1)+"次被举报，在"+strconv.Itoa(bannedTimes+1)+"天之内您将无法发布树洞。",
 					(1+bannedTimes)*86400)
@@ -245,19 +245,19 @@ func doAttention(c *gin.Context) {
 		utils.HttpReturnWithCodeOne(c, "关注操作失败，pid不合法")
 		return
 	}
-	_, _, _, _, _, _, _, _, _, err3 := db.DbGetOnePost(pid)
+	_, _, _, _, _, _, _, _, _, err3 := db.GetOnePost(pid)
 	if err3 != nil {
 		utils.HttpReturnWithCodeOne(c, "关注失败，pid不存在")
 		return
 	}
 	s := c.PostForm("switch")
 	token := c.PostForm("user_token")
-	emailHash, err5 := db.DbGetInfoByToken(token)
+	emailHash, err5 := db.GetInfoByToken(token)
 	if err5 != nil {
 		utils.HttpReturnWithCodeOne(c, "举报失败，请检查登录状态")
 		return
 	}
-	isAttention, err2 := db.DbIsAttention(emailHash, pid)
+	isAttention, err2 := db.IsAttention(emailHash, pid)
 	if err2 != nil {
 		log.Printf("error dbIsAttention while doAttention: %s\n", err2)
 		utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")

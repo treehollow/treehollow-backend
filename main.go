@@ -22,10 +22,10 @@ func main() {
 	}
 
 	var err error
-	route.HotPosts, _ = db.DbGetHotPosts()
+	route.HotPosts, _ = db.GetHotPosts()
 	c := cron.New()
 	_, _ = c.AddFunc("*/1 * * * *", func() {
-		route.HotPosts, err = db.DbGetHotPosts()
+		route.HotPosts, err = db.GetHotPosts()
 		//log.Println("refreshed hotPosts ,err=", err)
 	})
 	c.Start()

@@ -148,7 +148,7 @@ func InitDb() {
 	utils.FatalErrorHandle(&err, "error preparing attentions sql query")
 }
 
-func DbGetAttentionPids(emailHash string) ([]int, error) {
+func GetAttentionPids(emailHash string) ([]int, error) {
 	var rtn []int
 	{
 	}
@@ -172,26 +172,26 @@ func DbGetAttentionPids(emailHash string) ([]int, error) {
 	return rtn, nil
 }
 
-func DbIsAttention(dzEmailHash string, pid int) (int, error) {
+func IsAttention(dzEmailHash string, pid int) (int, error) {
 	rtn := 0
 	err := isAttentionOut.QueryRow(dzEmailHash, pid).Scan(&rtn)
 	return rtn, err
 }
 
-func DbGetOnePost(pid int) (string, string, int, string, string, string, int, int, int, error) {
+func GetOnePost(pid int) (string, string, int, string, string, string, int, int, int, error) {
 	var emailHash, text, tag, typ, filePath string
 	var timestamp, likenum, replynum, reportnum int
 	err := getOnePostOut.QueryRow(pid).Scan(&emailHash, &text, &timestamp, &tag, &typ, &filePath, &likenum, &replynum, &reportnum)
 	return emailHash, text, timestamp, tag, typ, filePath, likenum, replynum, reportnum, err
 }
 
-func DbBannedTimesPost(dzEmailHash string, fromTimestamp int) (int, error) {
+func BannedTimesPost(dzEmailHash string, fromTimestamp int) (int, error) {
 	bannedTimes := 0
 	err := bannedTimesOut.QueryRow(dzEmailHash, fromTimestamp).Scan(&bannedTimes)
 	return bannedTimes, err
 }
 
-func DbSaveBanUser(dzEmailHash string, reason string, interval int) error {
+func SaveBanUser(dzEmailHash string, reason string, interval int) error {
 	timestamp := int(utils.GetTimeStamp())
 	_, err := banIns.Exec(dzEmailHash, reason, timestamp, timestamp+interval)
 
@@ -229,27 +229,27 @@ func parsePostsRows(rows *sql.Rows, err error) ([]interface{}, error) {
 	return rtn, nil
 }
 
-func DbGetPostsByPidList(pids []int) ([]interface{}, error) {
+func GetPostsByPidList(pids []int) ([]interface{}, error) {
 	rows, err := db.Query("SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum FROM posts WHERE pid IN (" + utils.SplitToString(pids, ",") + ") AND reportnum<10 ORDER BY pid DESC")
 	return parsePostsRows(rows, err)
 }
 
-func DbGetHotPosts() ([]interface{}, error) {
+func GetHotPosts() ([]interface{}, error) {
 	rows, err := hotPostsOut.Query()
 	return parsePostsRows(rows, err)
 }
 
-func DbSearchSavedPosts(str string, limitMin int, searchPageSize int) ([]interface{}, error) {
+func SearchSavedPosts(str string, limitMin int, searchPageSize int) ([]interface{}, error) {
 	rows, err := searchOut.Query(str, limitMin, searchPageSize)
 	return parsePostsRows(rows, err)
 }
 
-func DbGetDeletedPosts(limitMin int, searchPageSize int) ([]interface{}, error) {
+func GetDeletedPosts(limitMin int, searchPageSize int) ([]interface{}, error) {
 	rows, err := deletedOut.Query(limitMin, searchPageSize)
 	return parsePostsRows(rows, err)
 }
 
-func DbGetReports(limitMin int, searchPageSize int) ([]interface{}, error) {
+func GetReports(limitMin int, searchPageSize int) ([]interface{}, error) {
 	var rtn []interface{}
 	rows, err := reportsOut.Query(limitMin, searchPageSize)
 	if err != nil {
@@ -281,7 +281,7 @@ func DbGetReports(limitMin int, searchPageSize int) ([]interface{}, error) {
 	return rtn, nil
 }
 
-func DbGetBans(limitMin int, searchPageSize int) ([]interface{}, error) {
+func GetBans(limitMin int, searchPageSize int) ([]interface{}, error) {
 	var rtn []interface{}
 	rows, err := bansOut.Query(limitMin, searchPageSize)
 	if err != nil {
@@ -313,7 +313,7 @@ func DbGetBans(limitMin int, searchPageSize int) ([]interface{}, error) {
 	return rtn, nil
 }
 
-func DbGetSavedPosts(pidMin int, pidMax int) ([]interface{}, error) {
+func GetSavedPosts(pidMin int, pidMax int) ([]interface{}, error) {
 	var rtn []interface{}
 	rows, err := getPostsOut.Query(pidMin, pidMax)
 	if err != nil {
@@ -348,7 +348,7 @@ func DbGetSavedPosts(pidMin int, pidMax int) ([]interface{}, error) {
 	return rtn, nil
 }
 
-func DbGetBannedMsgs(emailHash string) ([]interface{}, error) {
+func GetBannedMsgs(emailHash string) ([]interface{}, error) {
 	var rtn []interface{}
 	rows, err := getBannedOut.Query(emailHash)
 	if err != nil {
@@ -382,7 +382,7 @@ func DbGetBannedMsgs(emailHash string) ([]interface{}, error) {
 	return rtn, nil
 }
 
-func DbGetSavedComments(pid int) ([]interface{}, error) {
+func GetSavedComments(pid int) ([]interface{}, error) {
 	var rtn []interface{}
 	rows, err := getCommentsOut.Query(pid)
 	if err != nil {
@@ -412,14 +412,14 @@ func DbGetSavedComments(pid int) ([]interface{}, error) {
 	return rtn, nil
 }
 
-func DbSaveCode(user string, code string) error {
+func SaveCode(user string, code string) error {
 	timestamp := int32(utils.GetTimeStamp())
 	_, err := saveCodeIns.Exec(utils.HashEmail(user), timestamp, code, timestamp, code)
 
 	return err
 }
 
-func DbGetCode(hashedUser string) (string, int64, error) {
+func GetCode(hashedUser string) (string, int64, error) {
 	var timestamp int64
 	var correctCode string
 	err := checkCodeOut.QueryRow(hashedUser).Scan(&timestamp, &correctCode)
@@ -429,31 +429,31 @@ func DbGetCode(hashedUser string) (string, int64, error) {
 	return correctCode, timestamp, nil
 }
 
-func DbSaveToken(token string, hashedUser string) error {
+func SaveToken(token string, hashedUser string) error {
 	timestamp := int32(utils.GetTimeStamp())
 	_, err := saveTokenIns.Exec(hashedUser, token, timestamp, timestamp, token)
 	return err
 }
 
-func DbGetCommentNameByEmailHash(emailHash string, pid int) (string, error) {
+func GetCommentNameByEmailHash(emailHash string, pid int) (string, error) {
 	var name string
 	err := checkCommentNameOut.QueryRow(pid, emailHash).Scan(&name)
 	return name, err
 }
 
-func DbGetMaxPid() (int, error) {
+func GetMaxPid() (int, error) {
 	var pid int64
 	err := db.QueryRow("SELECT MAX(pid) FROM posts").Scan(&pid)
 	return int(pid), err
 }
 
-func DbGetCommentCount(pid int, dzEmailHash string) (int, error) {
+func GetCommentCount(pid int, dzEmailHash string) (int, error) {
 	var rtn int64
 	err := getCommentCountOut.QueryRow(pid, dzEmailHash).Scan(&rtn)
 	return int(rtn), err
 }
 
-func DbSavePost(emailHash string, text string, tag string, typ string, filePath string) (int, error) {
+func SavePost(emailHash string, text string, tag string, typ string, filePath string) (int, error) {
 	timestamp := int32(utils.GetTimeStamp())
 	res, err := doPostIns.Exec(emailHash, text, timestamp, tag, typ, filePath)
 	if err != nil {
@@ -468,7 +468,7 @@ func DbSavePost(emailHash string, text string, tag string, typ string, filePath 
 	}
 }
 
-func DbSaveComment(emailHash string, text string, tag string, pid int, name string) (int, error) {
+func SaveComment(emailHash string, text string, tag string, pid int, name string) (int, error) {
 	timestamp := int32(utils.GetTimeStamp())
 	res, err := doCommentIns.Exec(emailHash, pid, text, tag, timestamp, name)
 	if err != nil {
@@ -483,7 +483,7 @@ func DbSaveComment(emailHash string, text string, tag string, pid int, name stri
 	}
 }
 
-func DbSaveReport(emailHash string, reason string, pid int) (int, error) {
+func SaveReport(emailHash string, reason string, pid int) (int, error) {
 	timestamp := int32(utils.GetTimeStamp())
 	res, err := doReportIns.Exec(emailHash, pid, reason, timestamp)
 	if err != nil {
@@ -498,7 +498,7 @@ func DbSaveReport(emailHash string, reason string, pid int) (int, error) {
 	}
 }
 
-func DbGetInfoByToken(token string) (string, error) {
+func GetInfoByToken(token string) (string, error) {
 	var emailHash string
 	err := getInfoOut.QueryRow(token).Scan(&emailHash)
 	return emailHash, err

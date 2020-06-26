@@ -33,7 +33,7 @@ func sendCode(c *gin.Context) {
 		return
 	}
 	now := utils.GetTimeStamp()
-	_, timeStamp, err := db.DbGetCode(hashedUser)
+	_, timeStamp, err := db.GetCode(hashedUser)
 	//if err != nil {
 	//	log.Printf("dbGetCode failed when sendCode: %s\n", err)
 	//}
@@ -55,7 +55,7 @@ func sendCode(c *gin.Context) {
 		return
 	}
 
-	err = db.DbSaveCode(user, code)
+	err = db.SaveCode(user, code)
 	if err != nil {
 		log.Printf("save code failed: %s\n", err)
 		c.JSON(http.StatusOK, gin.H{
@@ -92,7 +92,7 @@ func login(c *gin.Context) {
 		return
 	}
 
-	correctCode, timeStamp, err := db.DbGetCode(hashedUser)
+	correctCode, timeStamp, err := db.GetCode(hashedUser)
 	if err != nil {
 		log.Printf("check code failed: %s\n", err)
 	}
@@ -105,7 +105,7 @@ func login(c *gin.Context) {
 		return
 	}
 	token := utils.GenToken()
-	err = db.DbSaveToken(token, hashedUser)
+	err = db.SaveToken(token, hashedUser)
 	if err != nil {
 		log.Printf("failed dbSaveToken while login, %s\n", err)
 		c.JSON(http.StatusOK, gin.H{
@@ -126,9 +126,9 @@ func login(c *gin.Context) {
 func systemMsg(c *gin.Context) {
 	c.Header("Content-Type", "application/json; charset=utf-8")
 	token := c.Query("user_token")
-	emailHash, err := db.DbGetInfoByToken(token)
+	emailHash, err := db.GetInfoByToken(token)
 	if err == nil {
-		data, err2 := db.DbGetBannedMsgs(emailHash)
+		data, err2 := db.GetBannedMsgs(emailHash)
 		if err2 != nil {
 			log.Printf("dbGetBannedMsgs failed while systemMsg: %s\n", err2)
 			utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")

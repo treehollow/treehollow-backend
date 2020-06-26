@@ -6,12 +6,8 @@ MySQL使用[./init_db.sql](./init_db.sql)初始化。
 
 ## 构建方式
 ```bash
-cd src
-
-# 安装依赖
-go get ./...
-
-# 编译
+git clone https://github.com/thuhole/thuhole-go-backend
+cd thuhole-go-backend
 go build
 ```
 

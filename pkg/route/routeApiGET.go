@@ -21,7 +21,7 @@ func getOne(c *gin.Context) {
 	}
 	var text, tag, typ, filePath string
 	var timestamp, likenum, replynum int
-	_, text, timestamp, tag, typ, filePath, likenum, replynum, _, err = db.DbGetOnePost(pid)
+	_, text, timestamp, tag, typ, filePath, likenum, replynum, _, err = db.GetOnePost(pid)
 	if err != nil {
 		utils.HttpReturnWithCodeOne(c, "获取失败，pid不存在")
 		return
@@ -53,12 +53,12 @@ func getComment(c *gin.Context) {
 	token := c.Query("user_token")
 	attention := 0
 	if len(token) == 32 {
-		emailHash, err := db.DbGetInfoByToken(token)
+		emailHash, err := db.GetInfoByToken(token)
 		if err == nil {
-			attention, _ = db.DbIsAttention(emailHash, pid)
+			attention, _ = db.IsAttention(emailHash, pid)
 		}
 	}
-	data, err2 := db.DbGetSavedComments(pid)
+	data, err2 := db.GetSavedComments(pid)
 	if err2 != nil {
 		log.Printf("dbGetSavedComments failed: %s\n", err2)
 		utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
@@ -80,7 +80,7 @@ func getList(c *gin.Context) {
 		return
 	}
 	var maxPid int
-	maxPid, err = db.DbGetMaxPid()
+	maxPid, err = db.GetMaxPid()
 	if err != nil {
 		log.Printf("dbGetMaxPid failed: %s\n", err)
 		c.JSON(http.StatusOK, gin.H{
@@ -93,7 +93,7 @@ func getList(c *gin.Context) {
 	}
 	pidLeft := maxPid - p*consts.PageSize
 	pidRight := maxPid - (p-1)*consts.PageSize
-	data, err2 := db.DbGetSavedPosts(pidLeft, pidRight)
+	data, err2 := db.GetSavedPosts(pidLeft, pidRight)
 	if err2 != nil {
 		log.Printf("dbGetSavedPosts failed while getList: %s\n", err2)
 		utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
@@ -101,7 +101,7 @@ func getList(c *gin.Context) {
 	} else {
 		pinnedPids := utils.GetPinnedPids()
 		if len(pinnedPids) > 0 && p == 1 {
-			pinnedData, err3 := db.DbGetPostsByPidList(pinnedPids)
+			pinnedData, err3 := db.GetPostsByPidList(pinnedPids)
 			if err3 != nil {
 				log.Printf("get pinned post failed: %s\n", err2)
 				utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
@@ -208,13 +208,13 @@ func searchPost(c *gin.Context) {
 
 	var data []interface{}
 	if isAdmin && keywords == "deleted" {
-		data, err = db.DbGetDeletedPosts((page-1)*pageSize, pageSize)
+		data, err = db.GetDeletedPosts((page-1)*pageSize, pageSize)
 	} else if isAdmin && keywords == "bans" {
-		data, err = db.DbGetBans((page-1)*pageSize, pageSize)
+		data, err = db.GetBans((page-1)*pageSize, pageSize)
 	} else if isAdmin && keywords == "reports" {
-		data, err = db.DbGetReports((page-1)*pageSize, pageSize)
+		data, err = db.GetReports((page-1)*pageSize, pageSize)
 	} else {
-		data, err = db.DbSearchSavedPosts(strings.ReplaceAll(keywords, " ", " +"), (page-1)*pageSize, pageSize)
+		data, err = db.SearchSavedPosts(strings.ReplaceAll(keywords, " ", " +"), (page-1)*pageSize, pageSize)
 	}
 	if err != nil {
 		log.Printf("dbSearchSavedPosts or dbGetDeletedPosts failed while searchList: %s\n", err)
@@ -233,7 +233,7 @@ func searchPost(c *gin.Context) {
 
 func getAttention(c *gin.Context) {
 	token := c.Query("user_token")
-	emailHash, err := db.DbGetInfoByToken(token)
+	emailHash, err := db.GetInfoByToken(token)
 
 	if err != nil {
 		log.Printf("dbGetInfoByToken failed: %s\n", err)
@@ -241,7 +241,7 @@ func getAttention(c *gin.Context) {
 		return
 	}
 
-	pids, err3 := db.DbGetAttentionPids(emailHash)
+	pids, err3 := db.GetAttentionPids(emailHash)
 	if err3 != nil {
 		log.Printf("dbGetAttentionPids failed while getAttention: %s\n", err3)
 		utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
@@ -258,7 +258,7 @@ func getAttention(c *gin.Context) {
 		return
 	}
 
-	data, err2 := db.DbGetPostsByPidList(pids)
+	data, err2 := db.GetPostsByPidList(pids)
 	if err2 != nil {
 		log.Printf("dbGetPostsByPidList failed while getAttention: %s\n", err2)
 		utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
