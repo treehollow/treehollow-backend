@@ -86,16 +86,16 @@ func InitDb() {
 	SetPostTagIns, err = db.Prepare("UPDATE posts SET tag=? WHERE pid=?")
 	utils.FatalErrorHandle(&err, "error preparing posts sql query")
 
-	getPostsOut, err = db.Prepare("SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum FROM posts WHERE pid>? AND pid<=? AND reportnum<10 ORDER BY pid DESC")
+	getPostsOut, err = db.Prepare("SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum, reportnum FROM posts WHERE pid>? AND pid<=? AND reportnum<10 ORDER BY pid DESC")
 	utils.FatalErrorHandle(&err, "error preparing posts sql query")
 
-	searchOut, err = db.Prepare("SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum FROM posts WHERE match(text) against(? IN BOOLEAN MODE) AND reportnum<10 ORDER BY pid DESC LIMIT ?, ?")
+	searchOut, err = db.Prepare("SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum, reportnum FROM posts WHERE match(text) against(? IN BOOLEAN MODE) AND reportnum<10 ORDER BY pid DESC LIMIT ?, ?")
 	utils.FatalErrorHandle(&err, "error preparing posts sql query")
 
-	hotPostsOut, err = db.Prepare("SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum FROM posts WHERE pid>(SELECT MAX(pid)-1000 FROM posts) AND reportnum<10 ORDER BY likenum*3+replynum+timestamp/900-reportnum*10 DESC")
+	hotPostsOut, err = db.Prepare("SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum, reportnum FROM posts WHERE pid>(SELECT MAX(pid)-1000 FROM posts) AND reportnum<10 ORDER BY likenum*3+replynum+timestamp/900-reportnum*10 DESC")
 	utils.FatalErrorHandle(&err, "error preparing posts sql query")
 
-	deletedOut, err = db.Prepare("SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum FROM posts WHERE reportnum>=10 ORDER BY pid DESC LIMIT ?, ?")
+	deletedOut, err = db.Prepare("SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum, reportnum FROM posts WHERE reportnum>=10 ORDER BY pid DESC LIMIT ?, ?")
 	utils.FatalErrorHandle(&err, "error preparing posts sql query")
 
 	//COMMENTS
@@ -182,6 +182,9 @@ func GetOnePost(pid int) (string, string, int, string, string, string, int, int,
 	var emailHash, text, tag, typ, filePath string
 	var timestamp, likenum, replynum, reportnum int
 	err := getOnePostOut.QueryRow(pid).Scan(&emailHash, &text, &timestamp, &tag, &typ, &filePath, &likenum, &replynum, &reportnum)
+	if reportnum >= 5 && tag == "" {
+		tag = "用户举报较多"
+	}
 	return emailHash, text, timestamp, tag, typ, filePath, likenum, replynum, reportnum, err
 }
 
@@ -205,11 +208,14 @@ func parsePostsRows(rows *sql.Rows, err error) ([]interface{}, error) {
 	}
 
 	var emailHash, text, tag, typ, filePath string
-	var timestamp, pid, likenum, replynum int
+	var timestamp, pid, likenum, replynum, reportnum int
 	for rows.Next() {
-		err := rows.Scan(&pid, &emailHash, &text, &timestamp, &tag, &typ, &filePath, &likenum, &replynum)
+		err := rows.Scan(&pid, &emailHash, &text, &timestamp, &tag, &typ, &filePath, &likenum, &replynum, &reportnum)
 		if err != nil {
 			log.Fatal(err)
+		}
+		if reportnum >= 5 && tag == "" {
+			tag = "用户举报较多"
 		}
 		rtn = append(rtn, gin.H{
 			"pid":       pid,
@@ -230,7 +236,7 @@ func parsePostsRows(rows *sql.Rows, err error) ([]interface{}, error) {
 }
 
 func GetPostsByPidList(pids []int) ([]interface{}, error) {
-	rows, err := db.Query("SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum FROM posts WHERE pid IN (" + utils.SplitToString(pids, ",") + ") AND reportnum<10 ORDER BY pid DESC")
+	rows, err := db.Query("SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum, reportnum FROM posts WHERE pid IN (" + utils.SplitToString(pids, ",") + ") AND reportnum<10 ORDER BY pid DESC")
 	return parsePostsRows(rows, err)
 }
 
@@ -321,14 +327,17 @@ func GetSavedPosts(pidMin int, pidMax int) ([]interface{}, error) {
 	}
 
 	var emailHash, text, tag, typ, filePath string
-	var timestamp, pid, likenum, replynum int
+	var timestamp, pid, likenum, replynum, reportnum int
 	pinnedPids := utils.GetPinnedPids()
 	for rows.Next() {
-		err := rows.Scan(&pid, &emailHash, &text, &timestamp, &tag, &typ, &filePath, &likenum, &replynum)
+		err := rows.Scan(&pid, &emailHash, &text, &timestamp, &tag, &typ, &filePath, &likenum, &replynum, &reportnum)
 		if err != nil {
 			log.Fatal(err)
 		}
 		if _, ok := utils.ContainsInt(pinnedPids, pid); !ok {
+			if reportnum >= 5 && tag == "" {
+				tag = "用户举报较多"
+			}
 			rtn = append(rtn, gin.H{
 				"pid":       pid,
 				"text":      text,
