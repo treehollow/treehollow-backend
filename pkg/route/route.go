@@ -67,7 +67,7 @@ func sendCode(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
-		"msg":     "验证码发送成功，验证码有效期【12小时】。如果要在多客户端登录请不要使用邮件登录而是Token登录。不要多次发送验证码，请记得查看垃圾邮件。",
+		"msg":     "验证码发送成功。如果要在多客户端登录请不要使用邮件登录而是Token登录。不要多次发送验证码，请记得查看垃圾邮件。",
 	})
 }
 
