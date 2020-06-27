@@ -235,6 +235,18 @@ func parsePostsRows(rows *sql.Rows, err error) ([]interface{}, error) {
 	return rtn, nil
 }
 
+func GetNewRegisterCountIn24h() int {
+	var rtn int
+	_ = db.QueryRow("SELECT COUNT(*) FROM user_info WHERE timestamp>(SELECT MAX(timestamp)-86400 FROM user_info)").Scan(rtn)
+	return rtn
+}
+
+func GetUserCount() int {
+	var rtn int
+	_ = db.QueryRow("SELECT COUNT(*) FROM user_info").Scan(rtn)
+	return rtn
+}
+
 func GetPostsByPidList(pids []int) ([]interface{}, error) {
 	rows, err := db.Query("SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum, reportnum FROM posts WHERE pid IN (" + utils.SplitToString(pids, ",") + ") AND reportnum<10 ORDER BY pid DESC")
 	return parsePostsRows(rows, err)

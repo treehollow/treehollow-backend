@@ -1,6 +1,7 @@
 package route
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
 	"log"
@@ -205,6 +206,11 @@ func searchPost(c *gin.Context) {
 			httpReturnInfo(c, "rows affected = "+strconv.Itoa(int(rowsAffected))+"\nsuccess = "+strconv.FormatBool(err2 == nil))
 			return
 		}
+	}
+
+	if isAdmin && keywords == "statistics" {
+		httpReturnInfo(c, fmt.Sprintf("24h内注册用户：%d\n总注册用户：%d	", db.GetNewRegisterCountIn24h(), db.GetUserCount()))
+		return
 	}
 
 	var data []interface{}

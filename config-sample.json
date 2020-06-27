@@ -1,5 +1,5 @@
 {
-  "salt": "",
+  "salt": "your_salt",
   "images_path": "/path/to/your/nginx/images/folder",
   "sql_source": "username:pass@tcp(127.0.0.1:3306)/database",
   "pinned_pids": "1,23",

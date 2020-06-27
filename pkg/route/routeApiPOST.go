@@ -38,6 +38,9 @@ func doPost(c *gin.Context) {
 	} else if len(text) == 0 && typ == "text" {
 		utils.HttpReturnWithCodeOne(c, "请输入内容")
 		return
+	} else if strings.Contains(text, "此树洞已被折叠") && len(text) < 30 {
+		utils.HttpReturnWithCodeOne(c, "折叠不了哦")
+		return
 	} else if typ != "text" && typ != "image" {
 		utils.HttpReturnWithCodeOne(c, "未知类型的树洞")
 		return
