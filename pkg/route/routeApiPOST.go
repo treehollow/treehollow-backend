@@ -20,8 +20,8 @@ func generateTag(text string) string {
 	if re1.MatchString(text) {
 		return "折叠"
 	}
-	re2 := regexp.MustCompile("(手冲|母包|女优|包皮)")
-	if re2.MatchString(text) {
+	re2, err := regexp.Compile(viper.GetString("sex_related_regex"))
+	if err == nil && re2.MatchString(text) {
 		return "性相关"
 	}
 	return ""

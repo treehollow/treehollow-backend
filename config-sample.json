@@ -9,5 +9,6 @@
   "is_debug": true,
   "smtp_username": "alice@mails.thuhole.com",
   "smtp_password": "YOUR_PASSWORD",
-  "smtp_host": "smtpdm.aliyun.com"
+  "smtp_host": "smtpdm.aliyun.com",
+  "sex_related_regex": "(手冲)"
 }
