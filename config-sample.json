@@ -10,5 +10,6 @@
   "smtp_username": "alice@mails.thuhole.com",
   "smtp_password": "YOUR_PASSWORD",
   "smtp_host": "smtpdm.aliyun.com",
+  "fold_regex": "([A-Za-z0-9+/]{100})",
   "sex_related_regex": "(手冲)"
 }
