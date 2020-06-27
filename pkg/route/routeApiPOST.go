@@ -7,12 +7,25 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"thuhole-go-backend/pkg/consts"
 	"thuhole-go-backend/pkg/db"
 	"thuhole-go-backend/pkg/utils"
 )
+
+func generateTag(text string) string {
+	re1 := regexp.MustCompile("[A-Za-z0-9+/]{100}")
+	if re1.MatchString(text) {
+		return "折叠"
+	}
+	re2 := regexp.MustCompile("(手冲|母包|女优|包皮)")
+	if re2.MatchString(text) {
+		return "性相关"
+	}
+	return ""
+}
 
 func doPost(c *gin.Context) {
 	text := c.PostForm("text")
@@ -50,9 +63,9 @@ func doPost(c *gin.Context) {
 	var imgPath string
 	if typ == "image" {
 		imgPath = utils.GenToken()
-		pid, err = db.SavePost(emailHash, text, "", typ, imgPath+".jpeg")
+		pid, err = db.SavePost(emailHash, text, generateTag(text), typ, imgPath+".jpeg")
 	} else {
-		pid, err = db.SavePost(emailHash, text, "", typ, "")
+		pid, err = db.SavePost(emailHash, text, generateTag(text), typ, "")
 	}
 
 	if err != nil {
