@@ -237,13 +237,13 @@ func parsePostsRows(rows *sql.Rows, err error) ([]interface{}, error) {
 
 func GetNewRegisterCountIn24h() int {
 	var rtn int
-	_ = db.QueryRow("SELECT COUNT(*) FROM user_info WHERE timestamp>(SELECT MAX(timestamp)-86400 FROM user_info)").Scan(rtn)
+	_ = db.QueryRow("SELECT COUNT(*) FROM user_info WHERE timestamp>(SELECT MAX(timestamp)-86400 FROM user_info)").Scan(&rtn)
 	return rtn
 }
 
 func GetUserCount() int {
 	var rtn int
-	_ = db.QueryRow("SELECT COUNT(*) FROM user_info").Scan(rtn)
+	_ = db.QueryRow("SELECT COUNT(*) FROM user_info").Scan(&rtn)
 	return rtn
 }
 
