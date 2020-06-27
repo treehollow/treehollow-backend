@@ -174,7 +174,7 @@ func searchPost(c *gin.Context) {
 
 	// Admin function
 	token := c.Query("user_token")
-	setTagRe := regexp.MustCompile(`^settag (.*) (pid|cid)=(\d+)$`)
+	setTagRe := regexp.MustCompile(`^settag (.*) (pid=|cid=|)(\d+)$`)
 	isAdmin := strings.Contains(viper.GetString("report_admin_tokens"), token) &&
 		len(token) == 32 && !strings.Contains(token, ",")
 	if isAdmin && setTagRe.MatchString(keywords) {
@@ -187,7 +187,7 @@ func searchPost(c *gin.Context) {
 			httpReturnInfo(c, strs[3]+" not valid")
 			return
 		}
-		if typ == "pid" {
+		if typ == "pid=" || typ == "" {
 			r, err := db.SetPostTagIns.Exec(tag, id)
 			if err != nil {
 				httpReturnInfo(c, "failed")
@@ -196,7 +196,7 @@ func searchPost(c *gin.Context) {
 			rowsAffected, err2 := r.RowsAffected()
 			httpReturnInfo(c, "rows affected = "+strconv.Itoa(int(rowsAffected))+"\nsuccess = "+strconv.FormatBool(err2 == nil))
 			return
-		} else if typ == "cid" {
+		} else if typ == "cid=" {
 			r, err := db.SetCommentTagIns.Exec(tag, id)
 			if err != nil {
 				httpReturnInfo(c, "failed")
