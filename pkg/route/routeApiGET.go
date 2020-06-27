@@ -177,6 +177,7 @@ func searchPost(c *gin.Context) {
 	isAdmin := strings.Contains(viper.GetString("report_admin_tokens"), token) &&
 		len(token) == 32 && !strings.Contains(token, ",")
 	if isAdmin && setTagRe.MatchString(keywords) {
+		log.Printf("admin search action: token=%s, keywords=%s\n", token, keywords)
 		strs := setTagRe.FindStringSubmatch(keywords)
 		tag := strs[1]
 		typ := strs[2]
