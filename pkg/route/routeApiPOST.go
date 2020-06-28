@@ -270,7 +270,7 @@ func doAttention(c *gin.Context) {
 	token := c.PostForm("user_token")
 	emailHash, err5 := db.GetInfoByToken(token)
 	if err5 != nil {
-		utils.HttpReturnWithCodeOne(c, "举报失败，请检查登录状态")
+		utils.HttpReturnWithCodeOne(c, "关注失败，请检查登录状态")
 		return
 	}
 	isAttention, err2 := db.IsAttention(emailHash, pid)
