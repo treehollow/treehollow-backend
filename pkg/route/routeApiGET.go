@@ -59,6 +59,11 @@ func getComment(c *gin.Context) {
 			attention, _ = db.IsAttention(emailHash, pid)
 		}
 	}
+	_, _, _, _, _, _, _, _, _, err3 := db.GetOnePost(pid)
+	if err3 != nil {
+		utils.HttpReturnWithCodeOne(c, "pid不存在")
+		return
+	}
 	data, err2 := db.GetSavedComments(pid)
 	if err2 != nil {
 		log.Printf("dbGetSavedComments failed: %s\n", err2)
