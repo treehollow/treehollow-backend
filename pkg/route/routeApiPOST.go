@@ -16,7 +16,7 @@ import (
 )
 
 func generateTag(text string) string {
-	re := regexp.MustCompile(`^#(性相关|性话题|政治相关|政治话题|NSFW)#`)
+	re := regexp.MustCompile(`^#(性相关|性话题|政治相关|政治话题|NSFW|nsfw)#`)
 	if re.MatchString(text) {
 		return re.FindStringSubmatch(text)[1]
 	}

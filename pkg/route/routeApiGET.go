@@ -59,8 +59,10 @@ func getComment(c *gin.Context) {
 			attention, _ = db.IsAttention(emailHash, pid)
 		}
 	}
+	isAdmin := strings.Contains(viper.GetString("report_admin_tokens"), token) &&
+		len(token) == 32 && !strings.Contains(token, ",")
 	_, _, _, _, _, _, _, _, _, err3 := db.GetOnePost(pid)
-	if err3 != nil {
+	if err3 != nil && !isAdmin {
 		utils.HttpReturnWithCodeOne(c, "pid不存在")
 		return
 	}
