@@ -314,8 +314,8 @@ func GetReports(limitMin int, searchPageSize int) ([]interface{}, error) {
 		reportsText, _ := getReportsText(pid)
 		rtn = append(rtn, gin.H{
 			"pid": pid,
-			"text": fmt.Sprintf("%s\n**举报次数:%d, %s**\n**举报内容：**\n%s", text, reportnum,
-				utils.IfThenElse(reportnum >= 10, "$\\color{red}{\\text{deleted}}$", "$\\color{yellow}{\\text{not deleted}}$"), reportsText),
+			"text": fmt.Sprintf("%s\n\\\n**举报次数:%d, %s**\n**举报内容：**\n%s", text, reportnum,
+				utils.IfThenElse(reportnum >= 10, "$\\color{red}{\\text{deleted}}$", "$\\color{orange}{\\text{not deleted}}$"), reportsText),
 			"type":      typ,
 			"timestamp": timestamp,
 			"reply":     replynum,
