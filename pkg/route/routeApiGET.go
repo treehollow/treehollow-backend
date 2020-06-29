@@ -20,6 +20,16 @@ func getOne(c *gin.Context) {
 		utils.HttpReturnWithCodeOne(c, "获取失败，pid不合法")
 		return
 	}
+
+	token := c.Query("user_token")
+	if !viper.GetBool("allow_unregistered_access") {
+		_, err5 := db.GetInfoByToken(token)
+		if err5 != nil {
+			utils.HttpReturnWithCodeOne(c, "请检查登录状态")
+			return
+		}
+	}
+
 	var text, tag, typ, filePath string
 	var timestamp, likenum, replynum int
 	_, text, timestamp, tag, typ, filePath, likenum, replynum, _, err = db.GetOnePost(pid)
@@ -57,8 +67,15 @@ func getComment(c *gin.Context) {
 		emailHash, err := db.GetInfoByToken(token)
 		if err == nil {
 			attention, _ = db.IsAttention(emailHash, pid)
+		} else if !viper.GetBool("allow_unregistered_access") {
+			utils.HttpReturnWithCodeOne(c, "请检查登录状态")
+			return
 		}
+	} else if !viper.GetBool("allow_unregistered_access") {
+		utils.HttpReturnWithCodeOne(c, "请检查登录状态")
+		return
 	}
+
 	isAdmin := strings.Contains(viper.GetString("report_admin_tokens"), token) &&
 		len(token) == 32 && !strings.Contains(token, ",")
 	_, _, _, _, _, _, _, _, _, err3 := db.GetOnePost(pid)
@@ -87,6 +104,16 @@ func getList(c *gin.Context) {
 		utils.HttpReturnWithCodeOne(c, "获取失败，参数p不合法")
 		return
 	}
+
+	token := c.Query("user_token")
+	if !viper.GetBool("allow_unregistered_access") {
+		_, err5 := db.GetInfoByToken(token)
+		if err5 != nil {
+			utils.HttpReturnWithCodeOne(c, "请检查登录状态")
+			return
+		}
+	}
+
 	var maxPid int
 	maxPid, err = db.GetMaxPid()
 	if err != nil {
@@ -179,8 +206,16 @@ func searchPost(c *gin.Context) {
 		return
 	}
 
-	// Admin function
 	token := c.Query("user_token")
+	if !viper.GetBool("allow_unregistered_access") {
+		_, err5 := db.GetInfoByToken(token)
+		if err5 != nil {
+			utils.HttpReturnWithCodeOne(c, "请检查登录状态")
+			return
+		}
+	}
+
+	// Admin function
 	setTagRe := regexp.MustCompile(`^settag (.*) (pid=|cid=|)(\d+)$`)
 	isAdmin := strings.Contains(viper.GetString("report_admin_tokens"), token) &&
 		len(token) == 32 && !strings.Contains(token, ",")

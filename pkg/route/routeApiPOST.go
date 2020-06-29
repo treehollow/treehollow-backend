@@ -37,7 +37,7 @@ func doPost(c *gin.Context) {
 	token := c.PostForm("user_token")
 	img := c.PostForm("data")
 	if len(text) > consts.PostMaxLength {
-		utils.HttpReturnWithCodeOne(c, "字数过长！字数限制为"+strconv.Itoa(consts.PostMaxLength)+"字。")
+		utils.HttpReturnWithCodeOne(c, "字数过长！字数限制为"+strconv.Itoa(consts.PostMaxLength)+"字节。")
 		return
 	} else if len(text) == 0 && typ == "text" {
 		utils.HttpReturnWithCodeOne(c, "请输入内容")
@@ -114,7 +114,7 @@ func doPost(c *gin.Context) {
 func doComment(c *gin.Context) {
 	text := c.PostForm("text")
 	if len(text) > consts.CommentMaxLength {
-		utils.HttpReturnWithCodeOne(c, "字数过长！字数限制为"+strconv.Itoa(consts.CommentMaxLength)+"字。")
+		utils.HttpReturnWithCodeOne(c, "字数过长！字数限制为"+strconv.Itoa(consts.CommentMaxLength)+"字节。")
 		return
 	} else if len(text) == 0 {
 		utils.HttpReturnWithCodeOne(c, "请输入内容")
@@ -187,7 +187,7 @@ func doComment(c *gin.Context) {
 func doReport(c *gin.Context) {
 	reason := c.PostForm("reason")
 	if len(reason) > consts.ReportMaxLength {
-		utils.HttpReturnWithCodeOne(c, "字数过长！字数限制为"+strconv.Itoa(consts.ReportMaxLength)+"字。")
+		utils.HttpReturnWithCodeOne(c, "字数过长！字数限制为"+strconv.Itoa(consts.ReportMaxLength)+"字节。")
 		return
 	} else if len(reason) == 0 {
 		utils.HttpReturnWithCodeOne(c, "请输入内容")
