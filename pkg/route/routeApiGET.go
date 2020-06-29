@@ -22,7 +22,7 @@ func getOne(c *gin.Context) {
 	}
 
 	token := c.Query("user_token")
-	if !viper.GetBool("allow_unregistered_access") {
+	if !viper.GetBool("allow_unregistered_access") && !utils.IsInSubnet(c.ClientIP()) {
 		_, err5 := db.GetInfoByToken(token)
 		if err5 != nil {
 			c.AbortWithStatus(401)
@@ -67,11 +67,11 @@ func getComment(c *gin.Context) {
 		emailHash, err := db.GetInfoByToken(token)
 		if err == nil {
 			attention, _ = db.IsAttention(emailHash, pid)
-		} else if !viper.GetBool("allow_unregistered_access") {
+		} else if !viper.GetBool("allow_unregistered_access") && !utils.IsInSubnet(c.ClientIP()) {
 			c.AbortWithStatus(401)
 			return
 		}
-	} else if !viper.GetBool("allow_unregistered_access") {
+	} else if !viper.GetBool("allow_unregistered_access") && !utils.IsInSubnet(c.ClientIP()) {
 		c.AbortWithStatus(401)
 		return
 	}
@@ -106,7 +106,7 @@ func getList(c *gin.Context) {
 	}
 
 	token := c.Query("user_token")
-	if !viper.GetBool("allow_unregistered_access") {
+	if !viper.GetBool("allow_unregistered_access") && !utils.IsInSubnet(c.ClientIP()) {
 		_, err5 := db.GetInfoByToken(token)
 		if err5 != nil {
 			c.AbortWithStatus(401)
@@ -207,7 +207,7 @@ func searchPost(c *gin.Context) {
 	}
 
 	token := c.Query("user_token")
-	if !viper.GetBool("allow_unregistered_access") {
+	if !viper.GetBool("allow_unregistered_access") && !utils.IsInSubnet(c.ClientIP()) {
 		_, err5 := db.GetInfoByToken(token)
 		if err5 != nil {
 			c.AbortWithStatus(401)

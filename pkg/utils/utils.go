@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
 	"math/big"
+	"net"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -153,4 +154,15 @@ func SafeSubSlice(slice []interface{}, low int, high int) []interface{} {
 		return slice[low:high]
 	}
 	return nil
+}
+
+var AllowedSubnets []*net.IPNet
+
+func IsInSubnet(ip string) bool {
+	for _, subnet := range AllowedSubnets {
+		if subnet.Contains(net.ParseIP(ip)) {
+			return true
+		}
+	}
+	return false
 }
