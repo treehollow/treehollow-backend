@@ -25,7 +25,7 @@ func getOne(c *gin.Context) {
 	if !viper.GetBool("allow_unregistered_access") {
 		_, err5 := db.GetInfoByToken(token)
 		if err5 != nil {
-			utils.HttpReturnWithCodeOne(c, "请检查登录状态")
+			c.AbortWithStatus(403)
 			return
 		}
 	}
@@ -68,11 +68,11 @@ func getComment(c *gin.Context) {
 		if err == nil {
 			attention, _ = db.IsAttention(emailHash, pid)
 		} else if !viper.GetBool("allow_unregistered_access") {
-			utils.HttpReturnWithCodeOne(c, "请检查登录状态")
+			c.AbortWithStatus(403)
 			return
 		}
 	} else if !viper.GetBool("allow_unregistered_access") {
-		utils.HttpReturnWithCodeOne(c, "请检查登录状态")
+		c.AbortWithStatus(403)
 		return
 	}
 
@@ -109,7 +109,7 @@ func getList(c *gin.Context) {
 	if !viper.GetBool("allow_unregistered_access") {
 		_, err5 := db.GetInfoByToken(token)
 		if err5 != nil {
-			utils.HttpReturnWithCodeOne(c, "请检查登录状态")
+			c.AbortWithStatus(403)
 			return
 		}
 	}
@@ -210,7 +210,7 @@ func searchPost(c *gin.Context) {
 	if !viper.GetBool("allow_unregistered_access") {
 		_, err5 := db.GetInfoByToken(token)
 		if err5 != nil {
-			utils.HttpReturnWithCodeOne(c, "请检查登录状态")
+			c.AbortWithStatus(403)
 			return
 		}
 	}
