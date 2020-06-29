@@ -124,7 +124,7 @@ func InitDb() {
 	doReportIns, err = db.Prepare("INSERT INTO reports (email_hash, pid, reason, timestamp) VALUES (?, ?, ?, ?)")
 	utils.FatalErrorHandle(&err, "error preparing reports sql query")
 
-	reportsOut, err = db.Prepare("SELECT pid, reason, timestamp FROM reports WHERE pid=?")
+	reportsOut, err = db.Prepare("SELECT pid, reason, timestamp FROM reports WHERE pid=? ORDER BY timestamp")
 	utils.FatalErrorHandle(&err, "error preparing reports sql query")
 
 	//BANNED
