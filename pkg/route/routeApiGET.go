@@ -226,7 +226,7 @@ func searchPost(c *gin.Context) {
 	} else if isAdmin && keywords == "bans" {
 		data, err = db.GetBans((page-1)*pageSize, pageSize)
 	} else if isAdmin && keywords == "reports" {
-		data, err = db.GetReports((page-1)*pageSize, pageSize)
+		data, err = db.GetReports((page-1)*10, 10)
 	} else {
 		data, err = db.SearchSavedPosts(strings.ReplaceAll(keywords, " ", " +"), (page-1)*pageSize, pageSize)
 	}

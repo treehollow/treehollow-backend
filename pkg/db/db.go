@@ -2,11 +2,13 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/spf13/viper"
 	"log"
 	"thuhole-go-backend/pkg/utils"
+	"time"
 )
 
 var db *sql.DB
@@ -40,6 +42,7 @@ var getBannedOut *sql.Stmt
 var SetPostTagIns *sql.Stmt
 var SetCommentTagIns *sql.Stmt
 var reportsOut *sql.Stmt
+var reportedPostsOut *sql.Stmt
 var bansOut *sql.Stmt
 
 func InitDb() {
@@ -98,6 +101,9 @@ func InitDb() {
 	deletedOut, err = db.Prepare("SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum, reportnum FROM posts WHERE reportnum>=10 ORDER BY pid DESC LIMIT ?, ?")
 	utils.FatalErrorHandle(&err, "error preparing posts sql query")
 
+	reportedPostsOut, err = db.Prepare("SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum, reportnum FROM posts WHERE reportnum>0 ORDER BY pid DESC LIMIT ?, ?")
+	utils.FatalErrorHandle(&err, "error preparing posts sql query")
+
 	//COMMENTS
 	getCommentsOut, err = db.Prepare("SELECT cid, email_hash, text, tag, timestamp, name FROM comments WHERE pid=?")
 	utils.FatalErrorHandle(&err, "error preparing comments sql query")
@@ -118,7 +124,7 @@ func InitDb() {
 	doReportIns, err = db.Prepare("INSERT INTO reports (email_hash, pid, reason, timestamp) VALUES (?, ?, ?, ?)")
 	utils.FatalErrorHandle(&err, "error preparing reports sql query")
 
-	reportsOut, err = db.Prepare("SELECT pid, reason, timestamp FROM reports ORDER BY timestamp DESC LIMIT ?, ?")
+	reportsOut, err = db.Prepare("SELECT pid, reason, timestamp FROM reports WHERE pid=?")
 	utils.FatalErrorHandle(&err, "error preparing reports sql query")
 
 	//BANNED
@@ -267,29 +273,54 @@ func GetDeletedPosts(limitMin int, searchPageSize int) ([]interface{}, error) {
 	return parsePostsRows(rows, err)
 }
 
+func getReportsText(pid int) (string, error) {
+	rtn := ""
+	rows, err := reportsOut.Query(pid)
+	if err != nil {
+		return "error", err
+	}
+
+	loc, _ := time.LoadLocation("Asia/Shanghai")
+	var reason string
+	var pid2, timestamp int64
+	for rows.Next() {
+		err := rows.Scan(&pid2, &reason, &timestamp)
+		if err != nil {
+			log.Fatal(err)
+		}
+		rtn += "[" + time.Unix(timestamp, 0).In(loc).Format("01-02 15:04:05") + "] " + reason + "\n"
+	}
+	err = rows.Err()
+	if err != nil {
+		return "error", err
+	}
+	return rtn, nil
+}
+
 func GetReports(limitMin int, searchPageSize int) ([]interface{}, error) {
 	var rtn []interface{}
-	rows, err := reportsOut.Query(limitMin, searchPageSize)
+	rows, err := reportedPostsOut.Query(limitMin, searchPageSize)
 	if err != nil {
 		return nil, err
 	}
 
-	var reason string
-	var pid, timestamp int
+	var emailHash, text, tag, typ, filePath string
+	var timestamp, pid, likenum, replynum, reportnum int
 	for rows.Next() {
-		err := rows.Scan(&pid, &reason, &timestamp)
+		err := rows.Scan(&pid, &emailHash, &text, &timestamp, &tag, &typ, &filePath, &likenum, &replynum, &reportnum)
 		if err != nil {
 			log.Fatal(err)
 		}
+		reportsText, _ := getReportsText(pid)
 		rtn = append(rtn, gin.H{
 			"pid":       pid,
-			"text":      reason,
-			"type":      "text",
+			"text":      fmt.Sprintf("%s\n**举报次数:%d**\n**举报内容：**\n%s", text, reportnum, reportsText),
+			"type":      typ,
 			"timestamp": timestamp,
-			"reply":     0,
-			"likenum":   0,
-			"url":       "",
-			"tag":       nil,
+			"reply":     replynum,
+			"likenum":   likenum,
+			"url":       filePath,
+			"tag":       utils.IfThenElse(len(tag) != 0, tag, nil),
 		})
 	}
 	err = rows.Err()
