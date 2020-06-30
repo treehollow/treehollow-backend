@@ -32,7 +32,7 @@ func sendCode(c *gin.Context) {
 	if strings.Contains(viper.GetString("bannedEmailHashed"), hashedUser) {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"msg":     "很抱歉，您已被永久封禁。如对封禁有异议，请联系thuhole@protonmail.com。",
+			"msg":     "很抱歉，您的账户已被封禁。如果需要解封，请联系thuhole@protonmail.com。",
 		})
 		return
 	}
@@ -82,7 +82,7 @@ func login(c *gin.Context) {
 	if strings.Contains(viper.GetString("bannedEmailHashed"), hashedUser) {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"msg":     "很抱歉，您已被永久封禁。如对封禁有异议，请联系thuhole@protonmail.com。",
+			"msg":     "很抱歉，您的账户已被封禁。如果需要解封，请联系thuhole@protonmail.com。",
 		})
 		return
 	}
