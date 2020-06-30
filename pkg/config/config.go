@@ -10,7 +10,7 @@ import (
 
 func refreshAllowedSubnets() {
 	utils.AllowedSubnets = make([]*net.IPNet, 0)
-	subnets := viper.GetStringSlice("allow_unregistered_subnets")
+	subnets := viper.GetStringSlice("subnets_whitelist")
 	for _, subnet := range subnets {
 		_, tmp, _ := net.ParseCIDR(subnet)
 		utils.AllowedSubnets = append(utils.AllowedSubnets, tmp)

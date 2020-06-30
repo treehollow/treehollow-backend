@@ -158,7 +158,7 @@ func SafeSubSlice(slice []interface{}, low int, high int) []interface{} {
 
 var AllowedSubnets []*net.IPNet
 
-func IsInSubnet(ip string) bool {
+func IsInAllowedSubnet(ip string) bool {
 	for _, subnet := range AllowedSubnets {
 		if subnet.Contains(net.ParseIP(ip)) {
 			return true

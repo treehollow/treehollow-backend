@@ -13,7 +13,7 @@
   "fold_regex": "([A-Za-z0-9+/]{100})",
   "sex_related_regex": "(手冲)",
   "allow_unregistered_access": false,
-  "allow_unregistered_subnets": [
+  "subnets_whitelist": [
     "59.66.0.0/16",
     "101.5.0.0/16",
     "101.6.0.0/16",

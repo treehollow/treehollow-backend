@@ -4,6 +4,9 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
+	"github.com/ulule/limiter/v3"
+	mgin "github.com/ulule/limiter/v3/drivers/middleware/gin"
+	"github.com/ulule/limiter/v3/drivers/store/memory"
 	"log"
 	"net/http"
 	"strings"
@@ -11,6 +14,7 @@ import (
 	"thuhole-go-backend/pkg/db"
 	"thuhole-go-backend/pkg/mail"
 	"thuhole-go-backend/pkg/utils"
+	"time"
 )
 
 func sendCode(c *gin.Context) {
@@ -145,22 +149,20 @@ func systemMsg(c *gin.Context) {
 	}
 }
 
-//func optionsDebug(c *gin.Context) {
-//	c.Header("Content-Type", "application/json; charset=utf-8")
-//	c.Header("Access-Control-Allow-Origin", "*")
-//	c.Header("Access-Control-Allow-Headers", "Access-Control-Allow-Origin,Content-Type,Date,Content-Length")
-//	c.String(http.StatusOK, `{"test": "test"}`)
-//}
-
 func ListenHttp() {
 	r := gin.Default()
 	r.Use(cors.Default())
-	////if viper.GetBool("is_debug") {
-	//r.OPTIONS("/api_xmcp/login/send_code", optionsDebug) // OPTIONS method for bypassing CORS
-	//r.OPTIONS("/api_xmcp/login/login", optionsDebug)
-	//r.OPTIONS("/services/thuhole/api.php", optionsDebug)
-	////}
-	r.POST("/api_xmcp/login/send_code", sendCode)
+
+	rate := limiter.Rate{
+		Period: 24 * time.Hour,
+		Limit:  5,
+	}
+	store := memory.NewStore()
+	middleware := mgin.NewMiddleware(limiter.New(store, rate))
+
+	r.ForwardedByClientIP = true
+
+	r.POST("/api_xmcp/login/send_code", middleware, sendCode)
 	r.POST("/api_xmcp/login/login", login)
 	r.GET("/api_xmcp/hole/system_msg", systemMsg)
 	r.GET("/services/thuhole/api.php", apiGet)
