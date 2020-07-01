@@ -285,7 +285,6 @@ func getAttention(c *gin.Context) {
 	emailHash, err := db.GetInfoByToken(token)
 
 	if err != nil {
-		log.Printf("dbGetInfoByToken failed: %s\n", err)
 		utils.HttpReturnWithCodeOne(c, "操作失败，请检查登录状态")
 		return
 	}
