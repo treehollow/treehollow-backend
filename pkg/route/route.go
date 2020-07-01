@@ -5,7 +5,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
 	"github.com/ulule/limiter/v3"
-	mgin "github.com/ulule/limiter/v3/drivers/middleware/gin"
 	"github.com/ulule/limiter/v3/drivers/store/memory"
 	"log"
 	"net/http"
@@ -41,10 +40,26 @@ func sendCode(c *gin.Context) {
 	//if err != nil {
 	//	log.Printf("dbGetCode failed when sendCode: %s\n", err)
 	//}
-	if now-timeStamp < 600 {
+	if now-timeStamp < 300 {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"msg":     "请不要短时间内重复发送邮件。",
+		})
+		return
+	}
+
+	context, err2 := lmt.Peek(c, c.ClientIP())
+	if err2 != nil {
+		log.Printf("send mail to %s failed, limiter fatal error. IP=%s,err=%s\n", user, c.ClientIP(), err)
+		c.AbortWithStatus(500)
+		return
+	}
+
+	if context.Reached {
+		log.Printf("send mail to %s failed, too many requests. IP=%s,err=%s\n", user, c.ClientIP(), err)
+		c.JSON(http.StatusTooManyRequests, gin.H{
+			"success": false,
+			"msg":     "您今天已经发送了过多验证码，请24小时之后重试。",
 		})
 		return
 	}
@@ -69,9 +84,11 @@ func sendCode(c *gin.Context) {
 		return
 	}
 
+	_, _ = lmt.Get(c, c.ClientIP())
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
-		"msg":     "验证码发送成功。如果要在多客户端登录请不要使用邮件登录而是Token登录。不要多次发送验证码，请记得查看垃圾邮件。",
+		"msg":     "验证码发送成功。如果要在多客户端登录请不要使用邮件登录而是Token登录。5分钟内无法重复发送验证码，请记得查看垃圾邮件。",
 	})
 }
 
@@ -144,10 +161,12 @@ func systemMsg(c *gin.Context) {
 			})
 		}
 	} else {
-		log.Printf("check token failed: %s\n", err)
+		//log.Printf("check token failed: %s\n", err)
 		c.String(http.StatusOK, `{"error":null,"result":[]}`)
 	}
 }
+
+var lmt *limiter.Limiter
 
 func ListenHttp() {
 	r := gin.Default()
@@ -155,14 +174,12 @@ func ListenHttp() {
 
 	rate := limiter.Rate{
 		Period: 24 * time.Hour,
-		Limit:  5,
+		Limit:  2,
 	}
 	store := memory.NewStore()
-	middleware := mgin.NewMiddleware(limiter.New(store, rate))
+	lmt = limiter.New(store, rate)
 
-	r.ForwardedByClientIP = true
-
-	r.POST("/api_xmcp/login/send_code", middleware, sendCode)
+	r.POST("/api_xmcp/login/send_code", sendCode)
 	r.POST("/api_xmcp/login/login", login)
 	r.GET("/api_xmcp/hole/system_msg", systemMsg)
 	r.GET("/services/thuhole/api.php", apiGet)
