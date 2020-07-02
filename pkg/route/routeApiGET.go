@@ -76,8 +76,7 @@ func getComment(c *gin.Context) {
 		return
 	}
 
-	isAdmin := strings.Contains(viper.GetString("report_admin_tokens"), token) &&
-		len(token) == 32 && !strings.Contains(token, ",")
+	_, isAdmin := utils.ContainsString(viper.GetStringSlice("admins_tokens"), token)
 	_, _, _, _, _, _, _, _, _, err3 := db.GetOnePost(pid)
 	if err3 != nil && !isAdmin {
 		utils.HttpReturnWithCodeOne(c, "pid不存在")
@@ -134,7 +133,7 @@ func getList(c *gin.Context) {
 		utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
 		return
 	} else {
-		pinnedPids := utils.GetPinnedPids()
+		pinnedPids := viper.GetIntSlice("pin_pids")
 		if len(pinnedPids) > 0 && p == 1 {
 			pinnedData, err3 := db.GetPostsByPidList(pinnedPids)
 			if err3 != nil {
@@ -217,8 +216,7 @@ func searchPost(c *gin.Context) {
 
 	// Admin function
 	setTagRe := regexp.MustCompile(`^settag (.*) (pid=|cid=|)(\d+)$`)
-	isAdmin := strings.Contains(viper.GetString("report_admin_tokens"), token) &&
-		len(token) == 32 && !strings.Contains(token, ",")
+	_, isAdmin := utils.ContainsString(viper.GetStringSlice("admins_tokens"), token)
 	if isAdmin && setTagRe.MatchString(keywords) {
 		log.Printf("admin search action: token=%s, keywords=%s\n", token, keywords)
 		strs := setTagRe.FindStringSubmatch(keywords)

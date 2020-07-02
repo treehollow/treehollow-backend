@@ -372,7 +372,7 @@ func GetSavedPosts(pidMin int, pidMax int) ([]interface{}, error) {
 
 	var emailHash, text, tag, typ, filePath string
 	var timestamp, pid, likenum, replynum, reportnum int
-	pinnedPids := utils.GetPinnedPids()
+	pinnedPids := viper.GetIntSlice("pin_pids")
 	for rows.Next() {
 		err := rows.Scan(&pid, &emailHash, &text, &timestamp, &tag, &typ, &filePath, &likenum, &replynum, &reportnum)
 		if err != nil {

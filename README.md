@@ -17,10 +17,10 @@ go build
 - `salt`: 邮箱hash的加盐前缀
 - `images_path`: 存储图片的文件夹。这一文件夹需要能被网页访问。
 - `sql_source`: MySQL数据库配置
-- `pinned_pids`: 置顶树洞号
-- `report_whitelist_pids`: 不允许举报的树洞号
-- `report_admin_tokens`: 管理员的tokens，管理员举报树洞=直接禁言
-- `bannedEmailHashed`: 被封禁的邮箱哈希值列表
+- `pin_pids`: 置顶树洞号
+- `disallow_report_pids`: 不允许举报的树洞号
+- `admins_tokens`: 管理员的tokens
+- `bannedEmailHashes`: 被封禁的邮箱哈希值列表
 - `is_debug`: 是否启用debug模式
 - `smtp_username`: 邮箱服务username
 - `smtp_password`: 邮箱服务password

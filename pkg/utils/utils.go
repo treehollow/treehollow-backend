@@ -67,6 +67,16 @@ func ContainsInt(s []int, e int) (int, bool) {
 	return i, false
 }
 
+func ContainsString(s []string, e string) (int, bool) {
+	i := -1
+	for i, a := range s {
+		if a == e {
+			return i, true
+		}
+	}
+	return i, false
+}
+
 func GetCommenterName(id int) string {
 	switch {
 	case id == 0:
@@ -102,38 +112,6 @@ func SplitToString(a []int, sep string) string {
 		b[i] = strconv.Itoa(v)
 	}
 	return strings.Join(b, sep)
-}
-
-func GetPinnedPids() []int {
-	reg := regexp.MustCompile(`[ ,]`)
-	s := viper.GetString("pinned_pids")
-	var rtn []int
-	for _, str := range reg.Split(s, -1) {
-		if str != "" {
-			i, err := strconv.Atoi(str)
-			if err != nil {
-				FatalErrorHandle(&err, "pinned_pids Atoi error:"+str)
-			}
-			rtn = append(rtn, i)
-		}
-	}
-	return rtn
-}
-
-func GetReportWhitelistPids() []int {
-	reg := regexp.MustCompile(`[ ,]`)
-	s := viper.GetString("report_whitelist_pids")
-	var rtn []int
-	for _, str := range reg.Split(s, -1) {
-		if str != "" {
-			i, err := strconv.Atoi(str)
-			if err != nil {
-				FatalErrorHandle(&err, "report_whitelist_pids Atoi error:"+str)
-			}
-			rtn = append(rtn, i)
-		}
-	}
-	return rtn
 }
 
 func CheckEmail(email string) bool {

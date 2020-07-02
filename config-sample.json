@@ -2,10 +2,24 @@
   "salt": "your_salt",
   "images_path": "/path/to/your/nginx/images/folder",
   "sql_source": "username:pass@tcp(127.0.0.1:3306)/database",
-  "pinned_pids": "1,23",
-  "report_whitelist_pids": "1,23",
-  "report_admin_tokens": "TOKEN1,TOKEN2",
-  "bannedEmailHashed": "HASH1,HASH2,HASH3",
+  "pin_pids": [
+    9614,
+    11979
+  ],
+  "disallow_report_pids": [
+    118,
+    617,
+    968
+  ],
+  "admins_tokens": [
+    "TOKEN1",
+    "TOKEN2"
+  ],
+  "bannedEmailHashes": [
+    "HASH1",
+    "HASH2",
+    "HASH3"
+  ],
   "is_debug": true,
   "smtp_username": "alice@mails.thuhole.com",
   "smtp_password": "YOUR_PASSWORD",

@@ -197,7 +197,7 @@ func doReport(c *gin.Context) {
 	if err != nil {
 		utils.HttpReturnWithCodeOne(c, "举报失败，pid不合法")
 		return
-	} else if _, ok := utils.ContainsInt(utils.GetReportWhitelistPids(), pid); ok {
+	} else if _, ok := utils.ContainsInt(viper.GetIntSlice("disallow_report_pids"), pid); ok {
 		utils.HttpReturnWithCodeOne(c, "举报失败，哈哈")
 		return
 	}
@@ -217,7 +217,7 @@ func doReport(c *gin.Context) {
 		utils.HttpReturnWithCodeOne(c, "举报失败")
 		return
 	} else {
-		if strings.Contains(viper.GetString("report_admin_tokens"), token) {
+		if _, isAdmin := utils.ContainsString(viper.GetStringSlice("admins_tokens"), token); isAdmin {
 			_, err = db.Plus666ReportIns.Exec(pid)
 			if err != nil {
 				log.Printf("error plus666ReportIns while reporting: %s\n", err)
