@@ -7,6 +7,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/spf13/viper"
 	"log"
+	"thuhole-go-backend/pkg/consts"
 	"thuhole-go-backend/pkg/utils"
 	"time"
 )
@@ -280,7 +281,6 @@ func getReportsText(pid int) (string, error) {
 		return "error", err
 	}
 
-	loc, _ := time.LoadLocation("Asia/Shanghai")
 	var reason string
 	var pid2, timestamp int64
 	for rows.Next() {
@@ -288,7 +288,7 @@ func getReportsText(pid int) (string, error) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		rtn += "[" + time.Unix(timestamp, 0).In(loc).Format("01-02 15:04:05") + "] " + reason + "\n"
+		rtn += "[" + time.Unix(timestamp, 0).In(consts.TimeLoc).Format("01-02 15:04:05") + "] " + reason + "\n"
 	}
 	err = rows.Err()
 	if err != nil {

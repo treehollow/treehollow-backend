@@ -9,23 +9,22 @@ import (
 	"thuhole-go-backend/pkg/db"
 	"thuhole-go-backend/pkg/logger"
 	"thuhole-go-backend/pkg/route"
-	"thuhole-go-backend/pkg/utils"
+	"time"
 )
 
 func main() {
 	logger.InitLog()
 	config.InitConfigFile()
 	db.InitDb()
-	log.Println("start timestamp: ", utils.GetTimeStamp())
+	log.Println("start time: ", time.Now().Format("01-02 15:04:05"))
 	if false == viper.GetBool("is_debug") {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	var err error
 	route.HotPosts, _ = db.GetHotPosts()
 	c := cron.New()
 	_, _ = c.AddFunc("*/1 * * * *", func() {
-		route.HotPosts, err = db.GetHotPosts()
+		route.HotPosts, _ = db.GetHotPosts()
 		//log.Println("refreshed hotPosts ,err=", err)
 	})
 	c.Start()

@@ -1,5 +1,7 @@
 package consts
 
+import "time"
+
 //const AttentionMaxCount = 100
 const PageSize = 30
 const SearchMaxPageSize = 50
@@ -15,6 +17,8 @@ const LogFile = "log.txt"
 
 const DzName = "洞主"
 const ExtraNamePrefix = "You Win "
+
+var TimeLoc, _ = time.LoadLocation("Asia/Shanghai")
 
 var Names0 = []string{
 	"Angry",

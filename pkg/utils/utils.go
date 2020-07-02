@@ -47,7 +47,6 @@ func HashEmail(user string) string {
 }
 
 func GetTimeStamp() int64 {
-	//loc, _ := time.LoadLocation("Asia/Shanghai")
 	return time.Now().Unix()
 }
 
@@ -116,7 +115,7 @@ func SplitToString(a []int, sep string) string {
 
 func CheckEmail(email string) bool {
 	// REF: https://html.spec.whatwg.org/multipage/input.html#valid-e-mail-address
-	var emailRegexp = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
+	var emailRegexp = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 	return emailRegexp.MatchString(email)
 }
 
