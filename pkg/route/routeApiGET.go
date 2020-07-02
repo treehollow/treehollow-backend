@@ -34,7 +34,7 @@ func getOne(c *gin.Context) {
 	var timestamp, likenum, replynum int
 	_, text, timestamp, tag, typ, filePath, likenum, replynum, _, err = db.GetOnePost(pid)
 	if err != nil {
-		utils.HttpReturnWithCodeOne(c, "获取失败，pid不存在")
+		utils.HttpReturnWithCodeOne(c, "没有这条树洞")
 		return
 	} else {
 		c.JSON(http.StatusOK, gin.H{
