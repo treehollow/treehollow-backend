@@ -70,6 +70,30 @@ func doPost(c *gin.Context) {
 	var imgPath string
 	if typ == "image" {
 		imgPath = utils.GenToken()
+		sDec, err2 := base64.StdEncoding.DecodeString(img)
+		if err2 != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"code": 1,
+				"msg":  "发送失败，图片数据不合法",
+			})
+			return
+		}
+		fileType := http.DetectContentType(sDec)
+		if fileType != "image/jpeg" && fileType != "image/jpg" {
+			c.JSON(http.StatusOK, gin.H{
+				"code": 1,
+				"msg":  "发送失败，图片数据不合法",
+			})
+			return
+		}
+		err3 := ioutil.WriteFile(viper.GetString("images_path")+imgPath+".jpeg", sDec, 0644)
+		if err3 != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"code": 1,
+				"msg":  "图片写入失败，请联系管理员",
+			})
+			return
+		}
 		pid, err = db.SavePost(emailHash, text, generateTag(text), typ, imgPath+".jpeg")
 	} else {
 		pid, err = db.SavePost(emailHash, text, generateTag(text), typ, "")
@@ -83,24 +107,6 @@ func doPost(c *gin.Context) {
 		})
 		return
 	} else {
-		if typ == "image" {
-			sDec, err2 := base64.StdEncoding.DecodeString(img)
-			if err2 != nil {
-				c.JSON(http.StatusOK, gin.H{
-					"code": 1,
-					"msg":  "发送失败，图片数据不合法",
-				})
-				return
-			}
-			err3 := ioutil.WriteFile(viper.GetString("images_path")+imgPath+".jpeg", sDec, 0644)
-			if err3 != nil {
-				c.JSON(http.StatusOK, gin.H{
-					"code": 1,
-					"msg":  "图片写入失败，请联系管理员",
-				})
-				return
-			}
-		}
 		c.JSON(http.StatusOK, gin.H{
 			"code": 0,
 			"data": pid,
