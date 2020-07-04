@@ -43,7 +43,7 @@ func hash1(user string) string {
 }
 
 func HashEmail(user string) string {
-	return hash1(viper.GetString("salt") + hash1(user))
+	return hash1(viper.GetString("salt") + hash1(strings.ToLower(user)))
 }
 
 func GetTimeStamp() int64 {
