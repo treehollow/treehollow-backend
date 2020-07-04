@@ -76,9 +76,9 @@ go build
 +---------------------------+                                     +-----------------------------------------------+
 ```
 一共用到了3个CDN：
-- jsdelivr: 免费开源CDN，加速GitHub上的静态css/js文件。国内用了网宿CDN，速度较快。
-- Fastcache CDN: 付费CDN，加载动态资源和主页。此CDN用于保障三网用户延迟和网速在可接受的范围内。
-- Cloudflare CDN: 免费CDN，用于加载图片。未来考虑将图片资源换成专业图床。
+- jsdelivr: 免费开源CDN，加速GitHub上的静态css/js文件。国内用了网宿CDN，速度和延迟都很理想。
+- Fastcache CDN: 付费CDN，加载动态资源和主页。此CDN用于保障三网和教育网用户延迟和网速在可接受的范围内。
+- Cloudflare CDN: 免费CDN，用于加载图片，大陆地区访问速度和延迟不稳定。未来考虑将图片资源换成专业图床。
 
 ## License
 [GPL v3](./LICENSE)
