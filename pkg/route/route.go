@@ -174,7 +174,7 @@ func ListenHttp() {
 
 	rate := limiter.Rate{
 		Period: 24 * time.Hour,
-		Limit:  2,
+		Limit:  4,
 	}
 	store := memory.NewStore()
 	lmt = limiter.New(store, rate)
