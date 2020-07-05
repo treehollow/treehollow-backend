@@ -26,7 +26,7 @@ func sendCode(c *gin.Context) {
 		log.Println("recaptcha server error", err)
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"msg":     "验证码校验失败。",
+			"msg":     "recaptcha校验失败。",
 		})
 		return
 	}
