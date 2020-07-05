@@ -22,6 +22,13 @@ func sendCode(c *gin.Context) {
 	user := c.Query("user")
 	recaptchaToken := c.Query("recaptcha_token")
 	result, err := recaptcha.Confirm(c.ClientIP(), recaptchaToken)
+	if recaptchaToken == "" || recaptchaToken == "undefined" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"msg":     "recaptcha校验失败，请稍等片刻或刷新重试。",
+		})
+		return
+	}
 	if err != nil || !result {
 		log.Println("recaptcha server error", err)
 		c.JSON(http.StatusOK, gin.H{
