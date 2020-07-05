@@ -1,6 +1,7 @@
 package route
 
 import (
+	"github.com/dpapathanasiou/go-recaptcha"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
@@ -19,6 +20,17 @@ import (
 func sendCode(c *gin.Context) {
 	code := utils.GenCode()
 	user := c.Query("user")
+	recaptchaToken := c.Query("recaptcha_token")
+	result, err := recaptcha.Confirm(c.ClientIP(), recaptchaToken)
+	if err != nil || !result {
+		log.Println("recaptcha server error", err)
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"msg":     "验证码校验失败。",
+		})
+		return
+	}
+
 	if !(strings.HasSuffix(user, "@mails.tsinghua.edu.cn")) || !utils.CheckEmail(user) {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,

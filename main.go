@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/dpapathanasiou/go-recaptcha"
 	"github.com/gin-gonic/gin"
 	"github.com/robfig/cron/v3"
 	"github.com/spf13/viper"
@@ -16,6 +17,7 @@ func main() {
 	logger.InitLog()
 	config.InitConfigFile()
 	db.InitDb()
+	recaptcha.Init(viper.GetString("recaptcha_private_key"))
 	log.Println("start time: ", time.Now().Format("01-02 15:04:05"))
 	if false == viper.GetBool("is_debug") {
 		gin.SetMode(gin.ReleaseMode)
