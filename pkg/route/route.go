@@ -77,7 +77,7 @@ func sendCode(c *gin.Context) {
 	captcha, _ := recaptcha.NewReCAPTCHA(viper.GetString("recaptcha_private_key"), recaptcha.V3, 10*time.Second)
 	err = captcha.VerifyWithOptions(recaptchaToken, recaptcha.VerifyOption{RemoteIP: c.ClientIP()})
 	if err != nil {
-		log.Println("recaptcha server error", err)
+		log.Println("recaptcha server error", err, c.ClientIP(), user)
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"msg":     "recaptcha风控系统校验失败，请检查网络环境并刷新重试。如果注册持续失败，可邮件联系thuhole@protonmail.com人工注册。",
