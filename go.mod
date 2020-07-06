@@ -3,7 +3,6 @@ module thuhole-go-backend
 go 1.13
 
 require (
-	github.com/dpapathanasiou/go-recaptcha v0.0.0-20190121160230-be5090b17804
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/gin-contrib/cors v1.3.1
 	github.com/gin-gonic/gin v1.6.3
@@ -12,5 +11,6 @@ require (
 	github.com/spf13/viper v1.7.0
 	github.com/ulule/limiter/v3 v3.5.0
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
+	gopkg.in/ezzarghili/recaptcha-go.v4 v4.1.0
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 )

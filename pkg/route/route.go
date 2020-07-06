@@ -1,12 +1,12 @@
 package route
 
 import (
-	"github.com/dpapathanasiou/go-recaptcha"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
 	"github.com/ulule/limiter/v3"
 	"github.com/ulule/limiter/v3/drivers/store/memory"
+	"gopkg.in/ezzarghili/recaptcha-go.v4"
 	"log"
 	"net/http"
 	"strings"
@@ -21,19 +21,10 @@ func sendCode(c *gin.Context) {
 	code := utils.GenCode()
 	user := c.Query("user")
 	recaptchaToken := c.Query("recaptcha_token")
-	result, err := recaptcha.Confirm(c.ClientIP(), recaptchaToken)
 	if recaptchaToken == "" || recaptchaToken == "undefined" {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"msg":     "recaptcha校验失败，请稍等片刻或刷新重试。",
-		})
-		return
-	}
-	if err != nil || !result {
-		log.Println("recaptcha server error", err)
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"msg":     "recaptcha校验失败。",
+			"msg":     "recaptcha校验失败，请稍等片刻或刷新重试。如果注册持续失败，可邮件联系thuhole@protonmail.com人工注册。",
 		})
 		return
 	}
@@ -79,6 +70,17 @@ func sendCode(c *gin.Context) {
 		c.JSON(http.StatusTooManyRequests, gin.H{
 			"success": false,
 			"msg":     "您今天已经发送了过多验证码，请24小时之后重试。",
+		})
+		return
+	}
+
+	captcha, _ := recaptcha.NewReCAPTCHA(viper.GetString("recaptcha_private_key"), recaptcha.V3, 10*time.Second)
+	err = captcha.VerifyWithOptions(recaptchaToken, recaptcha.VerifyOption{RemoteIP: c.ClientIP()})
+	if err != nil {
+		log.Println("recaptcha server error", err)
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"msg":     "recaptcha风控系统校验失败，请检查网络环境并刷新重试。如果注册持续失败，可邮件联系thuhole@protonmail.com人工注册。",
 		})
 		return
 	}
