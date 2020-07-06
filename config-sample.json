@@ -38,5 +38,6 @@
     "219.223.168.0/21",
     "219.223.176.0/20"
   ],
-  "recaptcha_private_key": "get your recaptcha key at https://www.google.com/recaptcha/intro/v3.html"
+  "recaptcha_private_key": "get your recaptcha key at https://www.google.com/recaptcha/intro/v3.html",
+  "recaptcha_threshold": 0.8
 }

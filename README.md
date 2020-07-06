@@ -29,6 +29,7 @@ go build
 - `allow_unregistered_access`: 是否允许未登录用户访问
 - `subnets_whitelist`: 当`allow_unregistered_access`=`false`时，允许未登录游客访问的IP白名单
 - `recaptcha_private_key`: Google reCAPTCHA v3密钥
+- `recaptcha_threshold`: reCAPTCHA v3分数阈值
 
 当后端程序运行时编辑`config.json`可以热加载，不需要重启程序。
 

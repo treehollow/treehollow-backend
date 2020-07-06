@@ -75,7 +75,10 @@ func sendCode(c *gin.Context) {
 	}
 
 	captcha, _ := recaptcha.NewReCAPTCHA(viper.GetString("recaptcha_private_key"), recaptcha.V3, 10*time.Second)
-	err = captcha.VerifyWithOptions(recaptchaToken, recaptcha.VerifyOption{RemoteIP: c.ClientIP()})
+	err = captcha.VerifyWithOptions(recaptchaToken, recaptcha.VerifyOption{
+		RemoteIP:  c.ClientIP(),
+		Threshold: float32(viper.GetFloat64("recaptcha_threshold")),
+	})
 	if err != nil {
 		log.Println("recaptcha server error", err, c.ClientIP(), user)
 		c.JSON(http.StatusOK, gin.H{
