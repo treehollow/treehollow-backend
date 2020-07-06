@@ -58,7 +58,7 @@ func sendCode(c *gin.Context) {
 		return
 	}
 
-	context, err2 := lmt.Peek(c, c.ClientIP())
+	context, err2 := lmt.Get(c, c.ClientIP())
 	if err2 != nil {
 		log.Printf("send mail to %s failed, limiter fatal error. IP=%s,err=%s\n", user, c.ClientIP(), err)
 		c.AbortWithStatus(500)
@@ -84,8 +84,6 @@ func sendCode(c *gin.Context) {
 		})
 		return
 	}
-
-	_, _ = lmt.Get(c, c.ClientIP())
 
 	err = mail.SendMail(code, user)
 	if err != nil {
@@ -195,7 +193,7 @@ func ListenHttp() {
 
 	rate := limiter.Rate{
 		Period: 24 * time.Hour,
-		Limit:  4,
+		Limit:  6,
 	}
 	store := memory.NewStore()
 	lmt = limiter.New(store, rate)

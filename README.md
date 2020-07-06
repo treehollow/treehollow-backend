@@ -27,7 +27,7 @@ go build
 - `smtp_host`: 邮箱服务host
 - `*_regex`: 自动折叠识别的正则表达式
 - `allow_unregistered_access`: 是否允许未登录用户访问
-- `subnets_whitelist`: 当`allow_unregistered_access=false`时，允许未登录游客访问的IP白名单
+- `subnets_whitelist`: 当`allow_unregistered_access`=`false`时，允许未登录游客访问的IP白名单
 - `recaptcha_private_key`: Google reCAPTCHA v3密钥
 
 当后端程序运行时编辑`config.json`可以热加载，不需要重启程序。
