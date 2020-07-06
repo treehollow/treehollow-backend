@@ -192,6 +192,16 @@ func searchPost(c *gin.Context) {
 		utils.HttpReturnWithCodeOne(c, "获取失败，参数pagesize不合法")
 		return
 	}
+
+	token := c.Query("user_token")
+	if !viper.GetBool("allow_unregistered_access") && !utils.IsInAllowedSubnet(c.ClientIP()) {
+		_, err5 := db.GetInfoByToken(token)
+		if err5 != nil {
+			c.AbortWithStatus(401)
+			return
+		}
+	}
+
 	keywords := c.Query("keywords")
 
 	if keywords == "热榜" {
@@ -203,15 +213,6 @@ func searchPost(c *gin.Context) {
 			"count":     utils.IfThenElse(rtn != nil, len(rtn), 0),
 		})
 		return
-	}
-
-	token := c.Query("user_token")
-	if !viper.GetBool("allow_unregistered_access") && !utils.IsInAllowedSubnet(c.ClientIP()) {
-		_, err5 := db.GetInfoByToken(token)
-		if err5 != nil {
-			c.AbortWithStatus(401)
-			return
-		}
 	}
 
 	// Admin function
