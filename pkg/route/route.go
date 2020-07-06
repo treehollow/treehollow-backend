@@ -60,7 +60,7 @@ func sendCode(c *gin.Context) {
 
 	context, err2 := lmt.Get(c, c.ClientIP())
 	if err2 != nil {
-		log.Printf("send mail to %s failed, limiter fatal error. IP=%s,err=%s\n", user, c.ClientIP(), err)
+		log.Printf("send mail to %s failed, limiter fatal error. IP=%s,err=%s\n", user, c.ClientIP(), err2)
 		c.AbortWithStatus(500)
 		return
 	}
