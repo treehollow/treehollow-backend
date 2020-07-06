@@ -25,6 +25,10 @@ go build
 - `smtp_username`: 邮箱服务username
 - `smtp_password`: 邮箱服务password
 - `smtp_host`: 邮箱服务host
+- `*_regex`: 自动折叠识别的正则表达式
+- `allow_unregistered_access`: 是否允许未登录用户访问
+- `subnets_whitelist`: 当`allow_unregistered_access=false`时，允许未登录游客访问的IP白名单
+- `recaptcha_private_key`: Google reCAPTCHA v3密钥
 
 当后端程序运行时编辑`config.json`可以热加载，不需要重启程序。
 
@@ -37,8 +41,10 @@ go build
 - MySQL数据库。使用[./init_db.sql](./init_db.sql)初始化。
 - Nginx。使得`config.json`中`images_path`文件夹里的图片文件在网页上可访问到。
 - 邮件服务。
+- Google reCAPTCHA v3, 在https://www.google.com/recaptcha/intro/v3.html 注册。
+- CDN服务，详见下文。
 
-## 部署说明
+## CDN说明
 为了降低成本，目前的网站使用了复杂的CDN结构，如图：
 ```
 +---------------------------+

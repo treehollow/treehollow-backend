@@ -85,6 +85,8 @@ func sendCode(c *gin.Context) {
 		return
 	}
 
+	_, _ = lmt.Get(c, c.ClientIP())
+
 	err = mail.SendMail(code, user)
 	if err != nil {
 		log.Printf("send mail to %s failed: %s\n", user, err)
@@ -104,8 +106,6 @@ func sendCode(c *gin.Context) {
 		})
 		return
 	}
-
-	_, _ = lmt.Get(c, c.ClientIP())
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
