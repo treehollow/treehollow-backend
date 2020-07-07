@@ -46,7 +46,7 @@ func sendCode(c *gin.Context) {
 		return
 	}
 	now := utils.GetTimeStamp()
-	_, timeStamp, err := db.GetCode(hashedUser)
+	_, timeStamp, _, err := db.GetCode(hashedUser)
 	//if err != nil {
 	//	log.Printf("dbGetCode failed when sendCode: %s\n", err)
 	//}
@@ -135,9 +135,16 @@ func login(c *gin.Context) {
 		return
 	}
 
-	correctCode, timeStamp, err := db.GetCode(hashedUser)
+	correctCode, timeStamp, failedTimes, err := db.GetCode(hashedUser)
 	if err != nil {
 		log.Printf("check code failed: %s\n", err)
+	}
+	if failedTimes >= 10 && now-timeStamp <= 43200 {
+		c.JSON(http.StatusOK, gin.H{
+			"code": 1,
+			"msg":  "验证码错误尝试次数过多，请重新发送验证码",
+		})
+		return
 	}
 	if correctCode != code || now-timeStamp > 43200 {
 		log.Printf("验证码无效或过期: %s, %s\n", user, code)
@@ -145,6 +152,7 @@ func login(c *gin.Context) {
 			"code": 1,
 			"msg":  "验证码无效或过期",
 		})
+		_, _ = db.PlusOneFailedCodeIns.Exec(hashedUser)
 		return
 	}
 	token := utils.GenToken()

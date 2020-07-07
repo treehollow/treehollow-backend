@@ -89,3 +89,6 @@ ALTER TABLE banned
 
 ALTER TABLE reports
     ADD INDEX (timestamp);
+
+ALTER TABLE verification_codes
+    ADD COLUMN failed_times INT DEFAULT 0 AFTER code;

@@ -45,6 +45,7 @@ var SetCommentTagIns *sql.Stmt
 var reportsOut *sql.Stmt
 var reportedPostsOut *sql.Stmt
 var bansOut *sql.Stmt
+var PlusOneFailedCodeIns *sql.Stmt
 
 func InitDb() {
 	var err error
@@ -52,10 +53,13 @@ func InitDb() {
 	utils.FatalErrorHandle(&err, "error opening sql db")
 
 	//VERIFICATION CODES
-	saveCodeIns, err = db.Prepare("INSERT INTO verification_codes (email_hash, timestamp, code) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE timestamp=?, code=?")
+	saveCodeIns, err = db.Prepare("INSERT INTO verification_codes (email_hash, timestamp, code, failed_times) VALUES (?, ?, ?, 0) ON DUPLICATE KEY UPDATE timestamp=?, code=?, failed_times=0")
 	utils.FatalErrorHandle(&err, "error preparing verification_codes sql query")
 
-	checkCodeOut, err = db.Prepare("SELECT timestamp, code FROM verification_codes WHERE email_hash=?")
+	checkCodeOut, err = db.Prepare("SELECT timestamp, code, failed_times FROM verification_codes WHERE email_hash=?")
+	utils.FatalErrorHandle(&err, "error preparing verification_codes sql query")
+
+	PlusOneFailedCodeIns, err = db.Prepare("UPDATE verification_codes SET failed_times=failed_times+1 WHERE email_hash=?")
 	utils.FatalErrorHandle(&err, "error preparing verification_codes sql query")
 
 	//USER INFO
@@ -472,14 +476,14 @@ func SaveCode(user string, code string) error {
 	return err
 }
 
-func GetCode(hashedUser string) (string, int64, error) {
-	var timestamp int64
+func GetCode(hashedUser string) (string, int64, int64, error) {
+	var timestamp, failedTimes int64
 	var correctCode string
-	err := checkCodeOut.QueryRow(hashedUser).Scan(&timestamp, &correctCode)
+	err := checkCodeOut.QueryRow(hashedUser).Scan(&timestamp, &correctCode, &failedTimes)
 	if err != nil {
-		return "", -1, err
+		return "", -1, -1, err
 	}
-	return correctCode, timestamp, nil
+	return correctCode, timestamp, failedTimes, nil
 }
 
 func SaveToken(token string, hashedUser string) error {
