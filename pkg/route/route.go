@@ -8,6 +8,7 @@ import (
 	"github.com/ulule/limiter/v3/drivers/store/memory"
 	"gopkg.in/ezzarghili/recaptcha-go.v4"
 	"log"
+	"net"
 	"net/http"
 	"strings"
 	"thuhole-go-backend/pkg/consts"
@@ -72,6 +73,18 @@ func sendCode(c *gin.Context) {
 			"msg":     "您今天已经发送了过多验证码，请24小时之后重试。",
 		})
 		return
+	}
+
+	ip := net.ParseIP(c.ClientIP())
+	record, err5 := utils.GeoDb.Country(ip)
+	if err5 == nil {
+		country := record.Country.Names["zh-CN"]
+		if _, ok := utils.ContainsString(viper.GetStringSlice("allowed_register_countries"), country); !ok {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"msg":     "您所在的国家暂未开放注册。",
+			})
+		}
 	}
 
 	captcha, _ := recaptcha.NewReCAPTCHA(viper.GetString("recaptcha_private_key"), recaptcha.V3, 10*time.Second)

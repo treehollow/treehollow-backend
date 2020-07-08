@@ -2,6 +2,7 @@ package config
 
 import (
 	"github.com/fsnotify/fsnotify"
+	"github.com/oschwald/geoip2-golang"
 	"github.com/spf13/viper"
 	"log"
 	"net"
@@ -18,6 +19,20 @@ func refreshAllowedSubnets() {
 	log.Println("subnets: ", subnets)
 }
 
+func refreshGeoIpDb() {
+	var err error
+	utils.GeoDb, err = geoip2.Open(viper.GetString("mmdb_path"))
+	if err != nil {
+		utils.FatalErrorHandle(&err, "error opening geoip db")
+	}
+	log.Println("geoip2 db loaded")
+}
+
+func refreshConfig() {
+	refreshAllowedSubnets()
+	refreshGeoIpDb()
+}
+
 func InitConfigFile() {
 	viper.SetConfigType("json")
 	viper.AddConfigPath(".")
@@ -27,8 +42,8 @@ func InitConfigFile() {
 
 	viper.WatchConfig()
 	viper.OnConfigChange(func(e fsnotify.Event) {
-		refreshAllowedSubnets()
 		log.Println("Config file changed:", e.Name)
+		refreshConfig()
 	})
-	refreshAllowedSubnets()
+	refreshConfig()
 }

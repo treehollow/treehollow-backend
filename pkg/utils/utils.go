@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/oschwald/geoip2-golang"
 	"github.com/spf13/viper"
 	"math/big"
 	"net"
@@ -17,6 +18,9 @@ import (
 	"thuhole-go-backend/pkg/consts"
 	"time"
 )
+
+var AllowedSubnets []*net.IPNet
+var GeoDb *geoip2.Reader
 
 func GenCode() string {
 	nBig, err := rand.Int(rand.Reader, big.NewInt(100000000))
@@ -132,8 +136,6 @@ func SafeSubSlice(slice []interface{}, low int, high int) []interface{} {
 	}
 	return nil
 }
-
-var AllowedSubnets []*net.IPNet
 
 func IsInAllowedSubnet(ip string) bool {
 	for _, subnet := range AllowedSubnets {
