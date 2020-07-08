@@ -80,6 +80,7 @@ func sendCode(c *gin.Context) {
 	if err5 == nil {
 		country := record.Country.Names["zh-CN"]
 		if _, ok := utils.ContainsString(viper.GetStringSlice("allowed_register_countries"), country); !ok {
+			log.Println("register not allowed:", c.ClientIP(), country, user)
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
 				"msg":     "您所在的国家暂未开放注册。",
