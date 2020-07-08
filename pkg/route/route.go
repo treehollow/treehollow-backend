@@ -85,6 +85,7 @@ func sendCode(c *gin.Context) {
 				"success": false,
 				"msg":     "您所在的国家暂未开放注册。",
 			})
+			return
 		}
 	}
 
