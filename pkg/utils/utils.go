@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/oschwald/geoip2-golang"
-	"github.com/spf13/viper"
 	"math/big"
 	"net"
 	"net/http"
@@ -21,6 +20,7 @@ import (
 
 var AllowedSubnets []*net.IPNet
 var GeoDb *geoip2.Reader
+var Salt string
 
 func GenCode() string {
 	nBig, err := rand.Int(rand.Reader, big.NewInt(100000000))
@@ -40,14 +40,14 @@ func GenToken() string {
 	return strings.ToLower(base32.StdEncoding.EncodeToString(randomBytes))
 }
 
-func hash1(user string) string {
+func Hash1(user string) string {
 	h := sha256.New()
 	h.Write([]byte(user))
 	return hex.EncodeToString(h.Sum(nil))
 }
 
 func HashEmail(user string) string {
-	return hash1(viper.GetString("salt") + hash1(strings.ToLower(user)))
+	return Hash1(Salt + Hash1(strings.ToLower(user)))
 }
 
 func GetTimeStamp() int64 {
