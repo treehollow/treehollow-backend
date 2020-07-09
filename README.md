@@ -14,7 +14,7 @@ go build
 将`config-sample.json`复制到`config.json`之后修改参数即可运行。
 
 `config.json`需要与可执行文件放在同一文件夹。参数包括：
-- `salt`: 邮箱hash的加盐前缀
+- `salt_hashed`: 邮箱hash的加盐前缀的hash，用于校验stdin中的salt。
 - `images_path`: 存储图片的文件夹。这一文件夹需要能被网页访问。
 - `sql_source`: MySQL数据库配置
 - `pin_pids`: 置顶树洞号
