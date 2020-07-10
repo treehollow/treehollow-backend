@@ -23,8 +23,7 @@ var doReportIns *sql.Stmt
 var checkCommentNameOut *sql.Stmt
 var getCommentCountOut *sql.Stmt
 var PlusOneCommentIns *sql.Stmt
-var PlusOneReportIns *sql.Stmt
-var Plus666ReportIns *sql.Stmt
+var PlusReportIns *sql.Stmt
 var PlusOneAttentionIns *sql.Stmt
 var MinusOneAttentionIns *sql.Stmt
 var getOnePostOut *sql.Stmt
@@ -79,10 +78,7 @@ func InitDb() {
 	PlusOneCommentIns, err = db.Prepare("UPDATE posts SET replynum=replynum+1 WHERE pid=?")
 	utils.FatalErrorHandle(&err, "error preparing posts sql query")
 
-	PlusOneReportIns, err = db.Prepare("UPDATE posts SET reportnum=reportnum+1 WHERE pid=?")
-	utils.FatalErrorHandle(&err, "error preparing posts sql query")
-
-	Plus666ReportIns, err = db.Prepare("UPDATE posts SET reportnum=reportnum+666 WHERE pid=?")
+	PlusReportIns, err = db.Prepare("UPDATE posts SET reportnum=reportnum+? WHERE pid=?")
 	utils.FatalErrorHandle(&err, "error preparing posts sql query")
 
 	PlusOneAttentionIns, err = db.Prepare("UPDATE posts SET likenum=likenum+1 WHERE pid=?")
@@ -194,7 +190,7 @@ func GetOnePost(pid int) (string, string, int, string, string, string, int, int,
 	var timestamp, likenum, replynum, reportnum int
 	err := getOnePostOut.QueryRow(pid).Scan(&emailHash, &text, &timestamp, &tag, &typ, &filePath, &likenum, &replynum, &reportnum)
 	if reportnum >= 3 && reportnum < 10 && tag == "" {
-		tag = "用户举报较多"
+		tag = "举报较多"
 	}
 	return emailHash, text, timestamp, tag, typ, filePath, likenum, replynum, reportnum, err
 }
@@ -226,7 +222,7 @@ func parsePostsRows(rows *sql.Rows, err error) ([]interface{}, error) {
 			log.Fatal(err)
 		}
 		if reportnum >= 3 && reportnum < 10 && tag == "" {
-			tag = "用户举报较多"
+			tag = "举报较多"
 		}
 		rtn = append(rtn, gin.H{
 			"pid":       pid,
@@ -384,7 +380,7 @@ func GetSavedPosts(pidMin int, pidMax int) ([]interface{}, error) {
 		}
 		if _, ok := utils.ContainsInt(pinnedPids, pid); !ok {
 			if reportnum >= 3 && reportnum < 10 && tag == "" {
-				tag = "用户举报较多"
+				tag = "举报较多"
 			}
 			rtn = append(rtn, gin.H{
 				"pid":       pid,

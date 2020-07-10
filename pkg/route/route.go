@@ -3,10 +3,10 @@ package route
 import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	libredis "github.com/go-redis/redis/v7"
 	"github.com/spf13/viper"
 	"github.com/ulule/limiter/v3"
-	"github.com/ulule/limiter/v3/drivers/store/memory"
-	"gopkg.in/ezzarghili/recaptcha-go.v4"
+	sredis "github.com/ulule/limiter/v3/drivers/store/redis"
 	"log"
 	"net"
 	"net/http"
@@ -14,9 +14,34 @@ import (
 	"thuhole-go-backend/pkg/consts"
 	"thuhole-go-backend/pkg/db"
 	"thuhole-go-backend/pkg/mail"
+	"thuhole-go-backend/pkg/recaptcha"
 	"thuhole-go-backend/pkg/utils"
 	"time"
 )
+
+var lmt *limiter.Limiter
+
+func initLimiter() {
+	rate := limiter.Rate{
+		Period: 24 * time.Hour,
+		Limit:  viper.GetInt64("max_email_per_ip_per_day"),
+	}
+	option, err := libredis.ParseURL(viper.GetString("redis_source"))
+	if err != nil {
+		utils.FatalErrorHandle(&err, "failed init redis url")
+		return
+	}
+	client := libredis.NewClient(option)
+	store, err2 := sredis.NewStoreWithOptions(client, limiter.StoreOptions{
+		Prefix:   "email_limiter",
+		MaxRetry: 3,
+	})
+	if err2 != nil {
+		utils.FatalErrorHandle(&err2, "failed init redis store")
+		return
+	}
+	lmt = limiter.New(store, rate)
+}
 
 func sendCode(c *gin.Context) {
 	code := utils.GenCode()
@@ -211,18 +236,11 @@ func systemMsg(c *gin.Context) {
 	}
 }
 
-var lmt *limiter.Limiter
-
 func ListenHttp() {
 	r := gin.Default()
 	r.Use(cors.Default())
 
-	rate := limiter.Rate{
-		Period: 24 * time.Hour,
-		Limit:  6,
-	}
-	store := memory.NewStore()
-	lmt = limiter.New(store, rate)
+	initLimiter()
 
 	r.POST("/api_xmcp/login/send_code", sendCode)
 	r.POST("/api_xmcp/login/login", login)

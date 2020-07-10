@@ -2,6 +2,7 @@
   "salt_hashed": "your_hashed_salt",
   "images_path": "/path/to/your/nginx/images/folder",
   "sql_source": "username:pass@tcp(127.0.0.1:3306)/database",
+  "redis_source": "redis://localhost:6379/0",
   "pin_pids": [
     9614,
     11979
@@ -38,6 +39,12 @@
     "219.223.168.0/21",
     "219.223.176.0/20"
   ],
+  "max_email_per_ip_per_day": 6,
   "recaptcha_private_key": "get your recaptcha key at https://www.google.com/recaptcha/intro/v3.html",
-  "recaptcha_threshold": 0.8
+  "recaptcha_threshold": 0.8,
+  "mmdb_path": "./GeoLite2-City.mmdb",
+  "allowed_register_countries": [
+    "美国",
+    "中国"
+  ]
 }

@@ -224,7 +224,7 @@ func doReport(c *gin.Context) {
 		return
 	} else {
 		if _, isAdmin := utils.ContainsString(viper.GetStringSlice("admins_tokens"), token); isAdmin {
-			_, err = db.Plus666ReportIns.Exec(pid)
+			_, err = db.PlusReportIns.Exec(666, pid)
 			if err != nil {
 				log.Printf("error plus666ReportIns while reporting: %s\n", err)
 			}
@@ -237,7 +237,7 @@ func doReport(c *gin.Context) {
 				log.Printf("error dbSaveBanUser while reporting: %s\n", err)
 			}
 		} else {
-			_, err = db.PlusOneReportIns.Exec(pid)
+			_, err = db.PlusReportIns.Exec(1, pid)
 			if err != nil {
 				log.Printf("error plusOneReportIns while reporting: %s\n", err)
 			}

@@ -3,13 +3,9 @@ create table user_info
     email_hash CHAR(64) NOT NULL,
     token      CHAR(32) NOT NULL,
     timestamp  INT      NOT NULL,
-    attentions VARCHAR(10000),
     PRIMARY KEY (email_hash),
     INDEX (token)
 ) DEFAULT CHARSET = ascii;
-
-ALTER TABLE user_info
-    DROP attentions;
 
 create table verification_codes
 (
