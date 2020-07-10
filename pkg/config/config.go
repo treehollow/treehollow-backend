@@ -23,9 +23,11 @@ func refreshGeoIpDb() {
 	var err error
 	utils.GeoDb, err = geoip2.Open(viper.GetString("mmdb_path"))
 	if err != nil {
-		utils.FatalErrorHandle(&err, "error opening geoip db")
+		utils.GeoDb = nil
+		log.Println("geoip2 db load failed. No IP location restrictions would be available.")
+	} else {
+		log.Println("geoip2 db loaded.")
 	}
-	log.Println("geoip2 db loaded")
 }
 
 func refreshConfig() {
