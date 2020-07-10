@@ -23,12 +23,12 @@ var GeoDb *geoip2.Reader
 var Salt string
 
 func GenCode() string {
-	nBig, err := rand.Int(rand.Reader, big.NewInt(100000000))
+	nBig, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	if err != nil {
 		panic(err)
 	}
 	n := nBig.Int64()
-	return fmt.Sprintf("%08d", n)
+	return fmt.Sprintf("%06d", n)
 }
 
 func GenToken() string {
