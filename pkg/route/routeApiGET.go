@@ -46,7 +46,7 @@ func getOne(c *gin.Context) {
 				"timestamp": timestamp,
 				"reply":     replynum,
 				"likenum":   likenum,
-				"url":       filePath,
+				"url":       utils.GetHashedFilePath(filePath),
 				"tag":       utils.IfThenElse(len(tag) != 0, tag, nil),
 			},
 			"timestamp": utils.GetTimeStamp(),

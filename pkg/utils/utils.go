@@ -145,3 +145,10 @@ func IsInAllowedSubnet(ip string) bool {
 	}
 	return false
 }
+
+func GetHashedFilePath(filePath string) string {
+	if len(filePath) > 2 {
+		return filePath[:2] + "/" + filePath
+	}
+	return filePath
+}

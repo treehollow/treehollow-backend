@@ -231,7 +231,7 @@ func parsePostsRows(rows *sql.Rows, err error) ([]interface{}, error) {
 			"timestamp": timestamp,
 			"reply":     replynum,
 			"likenum":   likenum,
-			"url":       filePath,
+			"url":       utils.GetHashedFilePath(filePath),
 			"tag":       utils.IfThenElse(len(tag) != 0, tag, nil),
 		})
 	}
@@ -320,7 +320,7 @@ func GetReports(limitMin int, searchPageSize int) ([]interface{}, error) {
 			"timestamp": timestamp,
 			"reply":     replynum,
 			"likenum":   likenum,
-			"url":       filePath,
+			"url":       utils.GetHashedFilePath(filePath),
 			"tag":       utils.IfThenElse(len(tag) != 0, tag, nil),
 		})
 	}
@@ -389,7 +389,7 @@ func GetSavedPosts(pidMin int, pidMax int) ([]interface{}, error) {
 				"timestamp": timestamp,
 				"reply":     replynum,
 				"likenum":   likenum,
-				"url":       filePath,
+				"url":       utils.GetHashedFilePath(filePath),
 				"tag":       utils.IfThenElse(len(tag) != 0, tag, nil),
 			})
 		}
