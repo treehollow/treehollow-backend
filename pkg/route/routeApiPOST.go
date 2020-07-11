@@ -7,6 +7,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -86,7 +88,7 @@ func doPost(c *gin.Context) {
 			})
 			return
 		}
-		err3 := ioutil.WriteFile(viper.GetString("images_path")+imgPath+".jpeg", sDec, 0644)
+		err3 := ioutil.WriteFile(filepath.Join(viper.GetString("images_path"), imgPath+".jpeg"), sDec, 0644)
 		if err3 != nil {
 			c.JSON(http.StatusOK, gin.H{
 				"code": 1,
@@ -94,6 +96,17 @@ func doPost(c *gin.Context) {
 			})
 			return
 		}
+		hashedPath := filepath.Join(viper.GetString("images_path"), imgPath[:2])
+		_ = os.MkdirAll(hashedPath, os.ModePerm)
+		err3 = ioutil.WriteFile(filepath.Join(hashedPath, imgPath+".jpeg"), sDec, 0644)
+		if err3 != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"code": 1,
+				"msg":  "图片写入失败，请联系管理员",
+			})
+			return
+		}
+
 		pid, err = db.SavePost(emailHash, text, generateTag(text), typ, imgPath+".jpeg")
 	} else {
 		pid, err = db.SavePost(emailHash, text, generateTag(text), typ, "")
