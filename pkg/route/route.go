@@ -140,7 +140,7 @@ func sendCode(c *gin.Context) {
 		return
 	}
 
-	err = db.SaveCode(user, code)
+	err = db.SaveCode(hashedUser, code)
 	if err != nil {
 		log.Printf("save code failed: %s\n", err)
 		c.JSON(http.StatusOK, gin.H{
@@ -238,7 +238,33 @@ func systemMsg(c *gin.Context) {
 	}
 }
 
-func ListenHttp() {
+//func ListenHttp() {
+//	r := gin.Default()
+//	r.Use(cors.Default())
+//
+//	initLimiter()
+//
+//	r.POST("/api_xmcp/login/send_code", sendCode)
+//	r.POST("/api_xmcp/login/login", login)
+//	r.GET("/api_xmcp/hole/system_msg", systemMsg)
+//	r.GET("/services/thuhole/api.php", apiGet)
+//	r.POST("/services/thuhole/api.php", apiPost)
+//	_ = r.Run(consts.ListenAddress)
+//}
+
+func ServicesApiListenHttp() {
+	r := gin.Default()
+	r.Use(cors.Default())
+
+	initLimiter()
+
+	r.GET("/api_xmcp/hole/system_msg", systemMsg)
+	r.GET("/services/thuhole/api.php", apiGet)
+	r.POST("/services/thuhole/api.php", apiPost)
+	_ = r.Run(consts.ServicesApiListenAddress)
+}
+
+func LoginApiListenHttp() {
 	r := gin.Default()
 	r.Use(cors.Default())
 
@@ -246,8 +272,5 @@ func ListenHttp() {
 
 	r.POST("/api_xmcp/login/send_code", sendCode)
 	r.POST("/api_xmcp/login/login", login)
-	r.GET("/api_xmcp/hole/system_msg", systemMsg)
-	r.GET("/services/thuhole/api.php", apiGet)
-	r.POST("/services/thuhole/api.php", apiPost)
-	_ = r.Run(consts.ListenAddress)
+	_ = r.Run(consts.LoginApiListenAddress)
 }

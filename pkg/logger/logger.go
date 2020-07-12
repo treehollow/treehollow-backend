@@ -4,11 +4,10 @@ import (
 	"io"
 	"log"
 	"os"
-	"thuhole-go-backend/pkg/consts"
 )
 
-func InitLog() {
-	logFile, err := os.OpenFile(consts.LogFile, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
+func InitLog(logFileName string) {
+	logFile, err := os.OpenFile(logFileName, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
 	if err != nil {
 		panic(err)
 	}

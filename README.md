@@ -8,7 +8,7 @@
 ```bash
 git clone https://github.com/thuhole/thuhole-go-backend
 cd thuhole-go-backend
-go build
+go install ./...
 ```
 
 将`config-sample.json`复制到`config.json`之后修改参数即可运行。
@@ -37,7 +37,7 @@ go build
 
 当后端程序运行时编辑`config.json`可以热加载，不需要重启程序。
 
-[./fallback_server/main.go](./fallback_server/main.go)是一个非常简易的显示维护信息的小程序。可以使用Nginx配置为fallback server.
+[cmd/fallback-server/main.go](cmd/fallback-server/main.go)是一个非常简易的显示维护信息的小程序。可以使用Nginx配置为fallback server.
 
 ## 部署方式
 

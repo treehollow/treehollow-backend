@@ -3,10 +3,10 @@ package main
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/robfig/cron/v3"
 	"github.com/spf13/viper"
 	"log"
 	"thuhole-go-backend/pkg/config"
+	"thuhole-go-backend/pkg/consts"
 	"thuhole-go-backend/pkg/db"
 	"thuhole-go-backend/pkg/logger"
 	"thuhole-go-backend/pkg/route"
@@ -15,7 +15,7 @@ import (
 )
 
 func main() {
-	logger.InitLog()
+	logger.InitLog(consts.LoginApiLogFile)
 	config.InitConfigFile()
 
 	fmt.Print("Read salt from stdin: ")
@@ -31,14 +31,5 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	route.HotPosts, _ = db.GetHotPosts()
-	c := cron.New()
-	_, _ = c.AddFunc("*/1 * * * *", func() {
-		route.HotPosts, _ = db.GetHotPosts()
-		//log.Println("refreshed hotPosts ,err=", err)
-	})
-	c.Start()
-
-	route.ListenHttp()
-
+	route.LoginApiListenHttp()
 }

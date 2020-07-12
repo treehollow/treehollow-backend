@@ -465,9 +465,9 @@ func GetSavedComments(pid int) ([]interface{}, error) {
 	return rtn, nil
 }
 
-func SaveCode(user string, code string) error {
+func SaveCode(userHashed string, code string) error {
 	timestamp := int32(utils.GetTimeStamp())
-	_, err := saveCodeIns.Exec(utils.HashEmail(user), timestamp, code, timestamp, code)
+	_, err := saveCodeIns.Exec(userHashed, timestamp, code, timestamp, code)
 
 	return err
 }

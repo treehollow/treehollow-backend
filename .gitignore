@@ -21,3 +21,4 @@ config.json
 log.txt
 TODO.md
 *.mmdb
+*.log
