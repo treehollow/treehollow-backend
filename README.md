@@ -37,12 +37,14 @@ go install ./...
 
 当后端程序运行时编辑`config.json`可以热加载，不需要重启程序。
 
-[cmd/fallback-server/main.go](cmd/fallback-server/main.go)是一个非常简易的显示维护信息的小程序。可以使用Nginx配置为fallback server.
+执行`go install ./...`时会在`$GOROOT/bin`生成三个文件可执行文件：
+- `fallback-server`: 是一个非常简易的显示维护信息的小程序。可以使用Nginx的`error_page 502`配置为fallback server.
+- `hole-login-api`: `/api_xmcp/login/*`的API服务
+- `hole-services-api`: `/services/thuhole/api.php`以及`/api_xmcp/hole/system_msg`的API服务
 
 ## 部署方式
 
-部署一个后端需要使用以下服务：
-- 此程序
+除了编译出的3个可执行文件外，部署一个后端需要使用以下服务：
 - MySQL数据库。使用[./init_db.sql](./init_db.sql)初始化。
 - Redis数据库。
 - Nginx。使得`config.json`中`images_path`文件夹里的图片文件在网页上可访问到。
