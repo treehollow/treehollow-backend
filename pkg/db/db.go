@@ -142,7 +142,7 @@ func InitDb() {
 	utils.FatalErrorHandle(&err, "error preparing banned sql query")
 
 	//ATTENTIONS
-	getAttentionPidsOut, err = db.Prepare("SELECT pid FROM attentions WHERE email_hash=? LIMIT 200")
+	getAttentionPidsOut, err = db.Prepare("SELECT pid FROM attentions WHERE email_hash=? LIMIT 500")
 	utils.FatalErrorHandle(&err, "error preparing attentions sql query")
 
 	AddAttentionIns, err = db.Prepare("INSERT INTO attentions (email_hash,  pid) VALUES (?, ?)")
