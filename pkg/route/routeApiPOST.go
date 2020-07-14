@@ -228,7 +228,21 @@ func doReport(c *gin.Context) {
 		utils.HttpReturnWithCodeOne(c, "举报失败")
 		return
 	} else {
-		if _, isAdmin := utils.ContainsString(viper.GetStringSlice("admins_tokens"), token); isAdmin {
+		if reportnum == 9 {
+			_, err = db.PlusReportIns.Exec(1, pid)
+			if err != nil {
+				log.Printf("error plusOneReportIns while reporting: %s\n", err)
+			}
+			//禁言
+			bannedTimes, _ := db.BannedTimesPost(dzEmailHash, -1)
+			err = db.SaveBanUser(dzEmailHash,
+				"您的"+typ+"树洞#"+strconv.Itoa(pid)+"\n\""+text+"\"\n由于用户举报过多被删除。这是您第"+
+					strconv.Itoa(bannedTimes+1)+"次被举报，在"+strconv.Itoa(bannedTimes+1)+"天之内您将无法发布树洞。",
+				(1+bannedTimes)*86400)
+			if err != nil {
+				log.Printf("error dbSaveBanUser while reporting: %s\n", err)
+			}
+		} else if _, isAdmin := utils.ContainsString(viper.GetStringSlice("admins_tokens"), token); isAdmin {
 			_, err = db.PlusReportIns.Exec(666, pid)
 			if err != nil {
 				log.Printf("error plus666ReportIns while reporting: %s\n", err)
@@ -245,17 +259,6 @@ func doReport(c *gin.Context) {
 			_, err = db.PlusReportIns.Exec(1, pid)
 			if err != nil {
 				log.Printf("error plusOneReportIns while reporting: %s\n", err)
-			}
-			if reportnum == 9 {
-				//禁言
-				bannedTimes, _ := db.BannedTimesPost(dzEmailHash, -1)
-				err = db.SaveBanUser(dzEmailHash,
-					"您的"+typ+"树洞#"+strconv.Itoa(pid)+"\n\""+text+"\"\n由于用户举报过多被删除。这是您第"+
-						strconv.Itoa(bannedTimes+1)+"次被举报，在"+strconv.Itoa(bannedTimes+1)+"天之内您将无法发布树洞。",
-					(1+bannedTimes)*86400)
-				if err != nil {
-					log.Printf("error dbSaveBanUser while reporting: %s\n", err)
-				}
 			}
 		}
 

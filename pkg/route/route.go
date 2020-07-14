@@ -256,8 +256,6 @@ func ServicesApiListenHttp() {
 	r := gin.Default()
 	r.Use(cors.Default())
 
-	initLimiter()
-
 	r.GET("/api_xmcp/hole/system_msg", systemMsg)
 	r.GET("/services/thuhole/api.php", apiGet)
 	r.POST("/services/thuhole/api.php", apiPost)

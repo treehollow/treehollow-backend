@@ -6,6 +6,7 @@ import "time"
 const PageSize = 30
 const SearchMaxPageSize = 50
 const SearchMaxPage = 60
+const SearchMaxLength = 80
 const PostMaxLength = 10000
 const CommentMaxLength = 10000
 const ReportMaxLength = 1000

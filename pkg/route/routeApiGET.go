@@ -204,6 +204,11 @@ func searchPost(c *gin.Context) {
 
 	keywords := c.Query("keywords")
 
+	if len(keywords) > consts.SearchMaxLength {
+		utils.HttpReturnWithCodeOne(c, "搜索内容过长")
+		return
+	}
+
 	if keywords == "热榜" {
 		rtn := utils.SafeSubSlice(HotPosts, (page-1)*pageSize, page*pageSize)
 		c.JSON(http.StatusOK, gin.H{
@@ -262,7 +267,7 @@ func searchPost(c *gin.Context) {
 	} else if isAdmin && keywords == "reports" {
 		data, err = db.GetReports((page-1)*10, 10)
 	} else {
-		data, err = db.SearchSavedPosts(strings.ReplaceAll(keywords, " ", " +"), (page-1)*pageSize, pageSize)
+		data, err = db.SearchSavedPosts("+"+strings.ReplaceAll(keywords, " ", " +"), (page-1)*pageSize, pageSize)
 	}
 	if err != nil {
 		log.Printf("dbSearchSavedPosts or dbGetDeletedPosts failed while searchList: %s\n", err)

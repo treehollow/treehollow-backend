@@ -96,7 +96,7 @@ func InitDb() {
 	searchOut, err = db.Prepare("SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum, reportnum FROM posts WHERE match(text) against(? IN BOOLEAN MODE) AND reportnum<10 ORDER BY pid DESC LIMIT ?, ?")
 	utils.FatalErrorHandle(&err, "error preparing posts sql query")
 
-	hotPostsOut, err = db.Prepare("SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum, reportnum FROM posts WHERE pid>(SELECT MAX(pid)-1000 FROM posts) AND reportnum<10 ORDER BY likenum*3+replynum+timestamp/900-reportnum*10 DESC")
+	hotPostsOut, err = db.Prepare("SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum, reportnum FROM posts WHERE pid>(SELECT MAX(pid)-2000 FROM posts) AND reportnum<10 ORDER BY likenum*3+replynum+timestamp/900-reportnum*10 DESC LIMIT 200")
 	utils.FatalErrorHandle(&err, "error preparing posts sql query")
 
 	deletedOut, err = db.Prepare("SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum, reportnum FROM posts WHERE reportnum>=10 ORDER BY pid DESC LIMIT ?, ?")
@@ -142,7 +142,7 @@ func InitDb() {
 	utils.FatalErrorHandle(&err, "error preparing banned sql query")
 
 	//ATTENTIONS
-	getAttentionPidsOut, err = db.Prepare("SELECT pid FROM attentions WHERE email_hash=? LIMIT 1000")
+	getAttentionPidsOut, err = db.Prepare("SELECT pid FROM attentions WHERE email_hash=? LIMIT 200")
 	utils.FatalErrorHandle(&err, "error preparing attentions sql query")
 
 	AddAttentionIns, err = db.Prepare("INSERT INTO attentions (email_hash,  pid) VALUES (?, ?)")
