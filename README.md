@@ -96,4 +96,4 @@ go install ./...
 - Cloudflare CDN: 免费CDN，用于加载图片，大陆地区访问速度和延迟不稳定。抗DDoS能力一流。未来考虑将图片资源换成专业图床。
 
 ## License
-[GPL v3](./LICENSE)
+[AGPL v3](./LICENSE)
