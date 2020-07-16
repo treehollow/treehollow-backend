@@ -93,7 +93,14 @@ func InitDb() {
 	getPostsOut, err = db.Prepare("SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum, reportnum FROM posts WHERE pid>? AND pid<=? AND reportnum<10 ORDER BY pid DESC")
 	utils.FatalErrorHandle(&err, "error preparing posts sql query")
 
-	searchOut, err = db.Prepare("SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum, reportnum FROM posts WHERE match(text) against(? IN BOOLEAN MODE) AND reportnum<10 ORDER BY pid DESC LIMIT ?, ?")
+	searchOut, err = db.Prepare(`SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum, reportnum FROM 
+              (
+                  SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum, reportnum FROM posts WHERE match(text) against(? IN BOOLEAN MODE) AND reportnum<10
+                  UNION
+                  SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum, reportnum FROM posts WHERE tag=? AND reportnum<10 
+                  UNION
+                  SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum, reportnum FROM posts WHERE pid=? AND reportnum<10 
+              ) result ORDER BY pid DESC LIMIT ?, ?`)
 	utils.FatalErrorHandle(&err, "error preparing posts sql query")
 
 	hotPostsOut, err = db.Prepare("SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum, reportnum FROM posts WHERE pid>(SELECT MAX(pid)-2000 FROM posts) AND reportnum<10 ORDER BY likenum*3+replynum+timestamp/900-reportnum*10 DESC LIMIT 200")
@@ -264,8 +271,8 @@ func GetHotPosts() ([]interface{}, error) {
 	return parsePostsRows(rows, err)
 }
 
-func SearchSavedPosts(str string, limitMin int, searchPageSize int) ([]interface{}, error) {
-	rows, err := searchOut.Query(str, limitMin, searchPageSize)
+func SearchSavedPosts(str string, tag string, pid string, limitMin int, searchPageSize int) ([]interface{}, error) {
+	rows, err := searchOut.Query(str, tag, pid, limitMin, searchPageSize)
 	return parsePostsRows(rows, err)
 }
 

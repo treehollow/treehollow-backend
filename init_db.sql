@@ -35,6 +35,9 @@ ALTER TABLE posts
 ALTER TABLE posts
     ADD FULLTEXT INDEX (text) WITH PARSER ngram;
 
+ALTER TABLE posts
+    ADD INDEX (tag);
+
 create table comments
 (
     cid        INT            NOT NULL AUTO_INCREMENT,

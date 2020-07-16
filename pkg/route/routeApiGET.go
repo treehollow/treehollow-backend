@@ -267,7 +267,7 @@ func searchPost(c *gin.Context) {
 	} else if isAdmin && keywords == "reports" {
 		data, err = db.GetReports((page-1)*10, 10)
 	} else {
-		data, err = db.SearchSavedPosts("+"+strings.ReplaceAll(keywords, " ", " +"), (page-1)*pageSize, pageSize)
+		data, err = db.SearchSavedPosts("+"+strings.ReplaceAll(keywords, " ", " +"), keywords, keywords, (page-1)*pageSize, pageSize)
 	}
 	if err != nil {
 		log.Printf("dbSearchSavedPosts or dbGetDeletedPosts failed while searchList: %s\n", err)
