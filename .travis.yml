@@ -7,6 +7,3 @@ script:
   - go build -o fallback-server ./cmd/fallback-server/main.go
   - go build -o hole-login-api ./cmd/hole-login-api/main.go
   - go build -o hole-services-api ./cmd/hole-services-api/main.go
-
-after_success:
-  - bash <(curl -s https://codecov.io/bash)
