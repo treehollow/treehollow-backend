@@ -97,6 +97,76 @@ go install ./...
 - Fastcache CDN: 付费CDN，加载动态资源和主页。10Tbps带宽储备，提供WAF、 DDoS 、CC防护。此CDN用于保障三网和教育网用户延迟和网速在可接受的范围内。
 - Cloudflare CDN: 免费CDN，用于加载图片，大陆地区访问速度和延迟不稳定。抗DDoS能力一流。未来考虑将图片资源换成专业图床。
 
+## Nginx配置示例
+
+**⚠注意：出于安全考虑，此配置仅供参考，切勿用于生产环境。**
+
+### img.thuhole.com.conf
+```
+server {
+    listen 80;
+
+    server_name img.thuhole.com;
+    index index.html index.htm;
+
+    root /path/to/images/folder/;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+}
+```
+### thuhole.com.conf
+```
+server {
+    listen 80;
+
+    server_name thuhole.com;
+    index index.html index.htm;
+
+    root /path/to/webhole/folder/;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    location /services/ {
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+
+        proxy_pass http://127.0.0.1:5001;
+        error_page 502 = @fallback;
+    }
+
+    location /api_xmcp/hole/ {
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+
+        proxy_pass http://127.0.0.1:5001;
+        error_page 502 = @fallback;
+    }
+
+    location /api_xmcp/login/ {
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+
+        proxy_pass http://127.0.0.1:5002;
+        error_page 502 = @fallback;
+    }
+
+    location @fallback {
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+
+        proxy_pass http://127.0.0.1:3002;
+    }
+}
+```
+
 ## License
 [AGPL v3](./LICENSE)
 
