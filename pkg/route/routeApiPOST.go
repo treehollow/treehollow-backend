@@ -102,7 +102,7 @@ func doPost(c *gin.Context) {
 		}
 
 		pid, err = db.SavePost(emailHash, text, generateTag(text), typ, imgPath+".jpeg")
-		if err != nil && len(viper.GetString("DCSecretKey")) > 0 {
+		if err == nil && len(viper.GetString("DCSecretKey")) > 0 {
 			err4 := s3.Upload(imgPath[:2]+"/"+imgPath+".jpeg", bytes.NewReader(sDec))
 			if err4 != nil {
 				log.Printf("S3 upload failed, err=%s\n", err4)
