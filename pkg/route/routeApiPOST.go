@@ -18,7 +18,7 @@ import (
 )
 
 func generateTag(text string) string {
-	re := regexp.MustCompile(`#(性相关|性话题|政治相关|政治话题|NSFW|nsfw|折叠)`)
+	re := regexp.MustCompile(`[#＃](性相关|性话题|政治相关|政治话题|NSFW|nsfw|折叠)`)
 	if re.MatchString(text) {
 		return strings.ToUpper(re.FindStringSubmatch(text)[1])
 	}
