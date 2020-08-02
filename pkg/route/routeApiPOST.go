@@ -1,6 +1,7 @@
 package route
 
 import (
+	"bytes"
 	"encoding/base64"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
@@ -14,6 +15,7 @@ import (
 	"strings"
 	"thuhole-go-backend/pkg/consts"
 	"thuhole-go-backend/pkg/db"
+	"thuhole-go-backend/pkg/s3"
 	"thuhole-go-backend/pkg/utils"
 )
 
@@ -100,6 +102,12 @@ func doPost(c *gin.Context) {
 		}
 
 		pid, err = db.SavePost(emailHash, text, generateTag(text), typ, imgPath+".jpeg")
+		if err != nil && len(viper.GetString("DCSecretKey")) > 0 {
+			err4 := s3.Upload(imgPath[:2]+"/"+imgPath+".jpeg", bytes.NewReader(sDec))
+			if err4 != nil {
+				log.Printf("S3 upload failed, err=%s\n", err4)
+			}
+		}
 	} else {
 		pid, err = db.SavePost(emailHash, text, generateTag(text), typ, "")
 	}
