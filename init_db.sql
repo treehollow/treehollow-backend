@@ -51,6 +51,9 @@ create table comments
     INDEX (pid)
 ) DEFAULT CHARSET = utf8mb4;
 
+ALTER TABLE comments
+    ADD COLUMN reportnum INT DEFAULT 0 AFTER name;
+
 create table reports
 (
     rid        INT            NOT NULL AUTO_INCREMENT,

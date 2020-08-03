@@ -24,9 +24,11 @@ var checkCommentNameOut *sql.Stmt
 var getCommentCountOut *sql.Stmt
 var PlusOneCommentIns *sql.Stmt
 var PlusReportIns *sql.Stmt
+var PlusCommentReportIns *sql.Stmt
 var PlusOneAttentionIns *sql.Stmt
 var MinusOneAttentionIns *sql.Stmt
 var getOnePostOut *sql.Stmt
+var getOneCommentOut *sql.Stmt
 var getCommentsOut *sql.Stmt
 var getPostsOut *sql.Stmt
 var getAttentionPidsOut *sql.Stmt
@@ -113,7 +115,10 @@ func InitDb() {
 	utils.FatalErrorHandle(&err, "error preparing posts sql query")
 
 	//COMMENTS
-	getCommentsOut, err = db.Prepare("SELECT cid, email_hash, text, tag, timestamp, name FROM comments WHERE pid=?")
+	getCommentsOut, err = db.Prepare("SELECT cid, email_hash, text, tag, timestamp, name FROM comments WHERE pid=? AND reportnum<5")
+	utils.FatalErrorHandle(&err, "error preparing comments sql query")
+
+	getOneCommentOut, err = db.Prepare("SELECT pid, email_hash, text, timestamp, tag, reportnum FROM comments WHERE cid=? AND reportnum<5")
 	utils.FatalErrorHandle(&err, "error preparing comments sql query")
 
 	doCommentIns, err = db.Prepare("INSERT INTO comments (email_hash, pid, text, tag, timestamp, name) VALUES (?, ?, ?, ?, ?, ?)")
@@ -126,6 +131,9 @@ func InitDb() {
 	utils.FatalErrorHandle(&err, "error preparing comments sql query")
 
 	SetCommentTagIns, err = db.Prepare("UPDATE comments SET tag=? WHERE cid=?")
+	utils.FatalErrorHandle(&err, "error preparing comments sql query")
+
+	PlusCommentReportIns, err = db.Prepare("UPDATE comments SET reportnum=reportnum+? WHERE cid=?")
 	utils.FatalErrorHandle(&err, "error preparing comments sql query")
 
 	//REPORTS
@@ -200,6 +208,13 @@ func GetOnePost(pid int) (string, string, int, string, string, string, int, int,
 		tag = "举报较多"
 	}
 	return emailHash, text, timestamp, tag, typ, filePath, likenum, replynum, reportnum, err
+}
+
+func GetOneComment(cid int) (int, string, string, int, string, int, error) {
+	var emailHash, text, tag string
+	var timestamp, reportnum, pid int
+	err := getOneCommentOut.QueryRow(cid).Scan(&pid, &emailHash, &text, &timestamp, &tag, &reportnum)
+	return pid, emailHash, text, timestamp, tag, reportnum, err
 }
 
 func BannedTimesPost(dzEmailHash string, fromTimestamp int) (int, error) {

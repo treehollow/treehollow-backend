@@ -254,6 +254,46 @@ func searchPost(c *gin.Context) {
 		}
 	}
 
+	delCommentRe := regexp.MustCompile(`^del (\d+) (.*)$`)
+	if isAdmin && delCommentRe.MatchString(keywords) {
+		log.Printf("admin search action: token=%s, keywords=%s\n", token, keywords)
+		strs := delCommentRe.FindStringSubmatch(keywords)
+		reason := strs[2]
+		id, err2 := strconv.Atoi(strs[1])
+		if err2 != nil {
+			httpReturnInfo(c, strs[3]+" not valid")
+			return
+		}
+		_, czEmailHash, text, _, _, _, err := db.GetOneComment(id)
+		if err != nil {
+			log.Printf("GetOneComment failed while delComment: %s\n", err)
+			httpReturnInfo(c, "cid不存在")
+			return
+		}
+		bannedTimes, err := db.BannedTimesPost(czEmailHash, -1)
+		if err != nil {
+			log.Printf("BannedTimesPost failed while delComment: %s\n", err)
+			httpReturnInfo(c, "error while getting banned times")
+			return
+		}
+		_, err = db.PlusCommentReportIns.Exec(666, id)
+		if err != nil {
+			log.Printf("PlusCommentReportIns failed while delComment: %s\n", err)
+			httpReturnInfo(c, "error while updating reportnum")
+			return
+		}
+		msg := "您的树洞评论#" + strconv.Itoa(id) + "\n\"" + text + "\"\n被管理员删除。管理员的删除理由是：【" + reason + "】。这是您第" +
+			strconv.Itoa(bannedTimes+1) + "次被举报，在" + strconv.Itoa(bannedTimes+1) + "天之内您将无法发布树洞。"
+		err = db.SaveBanUser(czEmailHash, msg, (1+bannedTimes)*86400)
+		if err != nil {
+			log.Printf("error dbSaveBanUser while delComment: %s\n", err)
+			httpReturnInfo(c, "error while saving ban info")
+			return
+		}
+		httpReturnInfo(c, "success")
+		return
+	}
+
 	if isAdmin && keywords == "statistics" {
 		httpReturnInfo(c, fmt.Sprintf("24h内注册用户：%d\n总注册用户：%d	", db.GetNewRegisterCountIn24h(), db.GetUserCount()))
 		return
