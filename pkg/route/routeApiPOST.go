@@ -200,6 +200,15 @@ func doComment(c *gin.Context) {
 			_, _ = db.AddAttentionIns.Exec(emailHash, pid)
 			_, _ = db.PlusOneAttentionIns.Exec(pid)
 		}
+
+		// set tag
+		if dzEmailHash == emailHash {
+			re := regexp.MustCompile(`[#＃](性相关|性话题|政治相关|政治话题|NSFW|nsfw|折叠|重复内容)`)
+			if re.MatchString(text) {
+				tag := strings.ToUpper(re.FindStringSubmatch(text)[1])
+				_, _ = db.SetPostTagIns.Exec(tag, pid)
+			}
+		}
 	}
 }
 
