@@ -108,7 +108,8 @@ func getList(c *gin.Context) {
 	if !viper.GetBool("allow_unregistered_access") && !utils.IsInAllowedSubnet(c.ClientIP()) {
 		_, err5 := db.GetInfoByToken(token)
 		if err5 != nil {
-			c.AbortWithStatus(401)
+			//c.AbortWithStatus(401)
+			utils.HttpReturnWithCodeOne(c, "登录凭据过期，请使用邮箱重新登录。")
 			return
 		}
 	}
