@@ -94,3 +94,9 @@ ALTER TABLE reports
 
 ALTER TABLE verification_codes
     ADD COLUMN failed_times INT DEFAULT 0 AFTER code;
+
+ALTER TABLE comments
+    ADD COLUMN type VARCHAR(60) DEFAULT 'text' AFTER tag;
+
+ALTER TABLE comments
+    ADD COLUMN file_path VARCHAR(60) DEFAULT '' AFTER type;

@@ -265,7 +265,7 @@ func searchPost(c *gin.Context) {
 			httpReturnInfo(c, strs[3]+" not valid")
 			return
 		}
-		_, czEmailHash, text, _, _, _, err := db.GetOneComment(id)
+		_, czEmailHash, text, _, _, _, _, _, err := db.GetOneComment(id)
 		if err != nil {
 			log.Printf("GetOneComment failed while delComment: %s\n", err)
 			httpReturnInfo(c, "cid不存在")

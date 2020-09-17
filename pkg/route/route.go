@@ -11,7 +11,6 @@ import (
 	"net"
 	"net/http"
 	"strings"
-	"thuhole-go-backend/pkg/consts"
 	"thuhole-go-backend/pkg/db"
 	"thuhole-go-backend/pkg/mail"
 	"thuhole-go-backend/pkg/recaptcha"
@@ -259,7 +258,7 @@ func ServicesApiListenHttp() {
 	r.GET("/api_xmcp/hole/system_msg", systemMsg)
 	r.GET("/services/thuhole/api.php", apiGet)
 	r.POST("/services/thuhole/api.php", apiPost)
-	_ = r.Run(consts.ServicesApiListenAddress)
+	_ = r.Run(viper.GetString("services_api_listen_address"))
 }
 
 func LoginApiListenHttp() {
@@ -270,5 +269,5 @@ func LoginApiListenHttp() {
 
 	r.POST("/api_xmcp/login/send_code", sendCode)
 	r.POST("/api_xmcp/login/login", login)
-	_ = r.Run(consts.LoginApiListenAddress)
+	_ = r.Run(viper.GetString("login_api_listen_address"))
 }

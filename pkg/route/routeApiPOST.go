@@ -46,9 +46,6 @@ func doPost(c *gin.Context) {
 	} else if len(text) == 0 && typ == "text" {
 		utils.HttpReturnWithCodeOne(c, "请输入内容")
 		return
-	} else if strings.Contains(text, "单击以查看树洞") && len(text) < 30 {
-		utils.HttpReturnWithCodeOne(c, "单击以取消发送")
-		return
 	} else if typ != "text" && typ != "image" {
 		utils.HttpReturnWithCodeOne(c, "未知类型的树洞")
 		return
@@ -132,11 +129,20 @@ func doPost(c *gin.Context) {
 
 func doComment(c *gin.Context) {
 	text := c.PostForm("text")
+	typ := c.PostForm("type")
+	token := c.PostForm("user_token")
+	img := c.PostForm("data")
+	if typ != "image" {
+		typ = "text"
+	}
 	if len(text) > consts.CommentMaxLength {
 		utils.HttpReturnWithCodeOne(c, "字数过长！字数限制为"+strconv.Itoa(consts.CommentMaxLength)+"字节。")
 		return
-	} else if len(text) == 0 {
+	} else if len(text) == 0 && typ == "text" {
 		utils.HttpReturnWithCodeOne(c, "请输入内容")
+		return
+	} else if int(float64(len(img))/consts.Base64Rate) > consts.ImgMaxLength {
+		utils.HttpReturnWithCodeOne(c, "图片大小超出限制！")
 		return
 	}
 	pid, err := strconv.Atoi(c.PostForm("pid"))
@@ -144,7 +150,6 @@ func doComment(c *gin.Context) {
 		utils.HttpReturnWithCodeOne(c, "发送失败，pid不合法")
 		return
 	}
-	token := c.PostForm("user_token")
 	emailHash, err5 := db.GetInfoByToken(token)
 	if err5 != nil {
 		utils.HttpReturnWithCodeOne(c, "发送失败，请检查登录状态")
@@ -181,7 +186,49 @@ func doComment(c *gin.Context) {
 			name = utils.GetCommenterName(i + 1)
 		}
 	}
-	_, err = db.SaveComment(emailHash, text, "", pid, name)
+
+	var imgPath string
+	if typ == "image" {
+		imgPath = utils.GenToken()
+		sDec, err2 := base64.StdEncoding.DecodeString(img)
+		if err2 != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"code": 1,
+				"msg":  "发送失败，图片数据不合法",
+			})
+			return
+		}
+		fileType := http.DetectContentType(sDec)
+		if fileType != "image/jpeg" && fileType != "image/jpg" {
+			c.JSON(http.StatusOK, gin.H{
+				"code": 1,
+				"msg":  "发送失败，图片数据不合法",
+			})
+			return
+		}
+		hashedPath := filepath.Join(viper.GetString("images_path"), imgPath[:2])
+		_ = os.MkdirAll(hashedPath, os.ModePerm)
+		err3 := ioutil.WriteFile(filepath.Join(hashedPath, imgPath+".jpeg"), sDec, 0644)
+		if err3 != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"code": 1,
+				"msg":  "图片写入失败，请联系管理员",
+			})
+			return
+		}
+
+		_, err = db.SaveComment(emailHash, text, "", typ, imgPath+".jpeg", pid, name)
+		if err == nil && len(viper.GetString("DCSecretKey")) > 0 {
+			err4 := s3.Upload(imgPath[:2]+"/"+imgPath+".jpeg", bytes.NewReader(sDec))
+			if err4 != nil {
+				log.Printf("S3 upload failed, err=%s\n", err4)
+			}
+		}
+	} else {
+		_, err = db.SaveComment(emailHash, text, "", "text", "", pid, name)
+	}
+	//_, err = db.SaveComment(emailHash, text, "", "text", "", pid, name)
+
 	if err != nil {
 		utils.HttpReturnWithCodeOne(c, "数据库写入失败，请联系管理员")
 		return

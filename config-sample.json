@@ -1,4 +1,6 @@
 {
+  "services_api_listen_address": "127.0.0.1:5001",
+  "login_api_listen_address": "127.0.0.1:5002",
   "salt_hashed": "your_hashed_salt",
   "images_path": "/path/to/your/nginx/images/folder",
   "sql_source": "username:pass@tcp(127.0.0.1:3306)/database",

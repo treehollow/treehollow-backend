@@ -115,13 +115,13 @@ func InitDb() {
 	utils.FatalErrorHandle(&err, "error preparing posts sql query")
 
 	//COMMENTS
-	getCommentsOut, err = db.Prepare("SELECT cid, email_hash, text, tag, timestamp, name FROM comments WHERE pid=? AND reportnum<5")
+	getCommentsOut, err = db.Prepare("SELECT cid, email_hash, text, tag, timestamp, type, file_path, name FROM comments WHERE pid=? AND reportnum<5")
 	utils.FatalErrorHandle(&err, "error preparing comments sql query")
 
-	getOneCommentOut, err = db.Prepare("SELECT pid, email_hash, text, timestamp, tag, reportnum FROM comments WHERE cid=? AND reportnum<5")
+	getOneCommentOut, err = db.Prepare("SELECT pid, email_hash, text, timestamp, tag, type, file_path, reportnum FROM comments WHERE cid=? AND reportnum<5")
 	utils.FatalErrorHandle(&err, "error preparing comments sql query")
 
-	doCommentIns, err = db.Prepare("INSERT INTO comments (email_hash, pid, text, tag, timestamp, name) VALUES (?, ?, ?, ?, ?, ?)")
+	doCommentIns, err = db.Prepare("INSERT INTO comments (email_hash, pid, text, tag, timestamp, type, file_path, name) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
 	utils.FatalErrorHandle(&err, "error preparing comments sql query")
 
 	checkCommentNameOut, err = db.Prepare("SELECT name FROM comments WHERE pid=? AND email_hash=?")
@@ -210,11 +210,11 @@ func GetOnePost(pid int) (string, string, int, string, string, string, int, int,
 	return emailHash, text, timestamp, tag, typ, filePath, likenum, replynum, reportnum, err
 }
 
-func GetOneComment(cid int) (int, string, string, int, string, int, error) {
-	var emailHash, text, tag string
+func GetOneComment(cid int) (int, string, string, int, string, string, string, int, error) {
+	var emailHash, text, tag, typ, filePath string
 	var timestamp, reportnum, pid int
-	err := getOneCommentOut.QueryRow(cid).Scan(&pid, &emailHash, &text, &timestamp, &tag, &reportnum)
-	return pid, emailHash, text, timestamp, tag, reportnum, err
+	err := getOneCommentOut.QueryRow(cid).Scan(&pid, &emailHash, &text, &timestamp, &tag, &typ, &filePath, &reportnum)
+	return pid, emailHash, text, timestamp, tag, typ, filePath, reportnum, err
 }
 
 func BannedTimesPost(dzEmailHash string, fromTimestamp int) (int, error) {
@@ -464,10 +464,10 @@ func GetSavedComments(pid int) ([]interface{}, error) {
 		return nil, err
 	}
 
-	var text, tag, name, emailHash string
+	var text, tag, name, emailHash, typ, filePath string
 	var cid, timestamp int
 	for rows.Next() {
-		err := rows.Scan(&cid, &emailHash, &text, &tag, &timestamp, &name)
+		err := rows.Scan(&cid, &emailHash, &text, &tag, &timestamp, &typ, &filePath, &name)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -475,7 +475,9 @@ func GetSavedComments(pid int) ([]interface{}, error) {
 			"cid":       cid,
 			"pid":       pid,
 			"text":      "[" + name + "] " + text,
+			"type":      typ,
 			"timestamp": timestamp,
+			"url":       utils.GetHashedFilePath(filePath),
 			"tag":       utils.IfThenElse(len(tag) != 0, tag, nil),
 			"name":      name,
 		})
@@ -543,9 +545,9 @@ func SavePost(emailHash string, text string, tag string, typ string, filePath st
 	}
 }
 
-func SaveComment(emailHash string, text string, tag string, pid int, name string) (int, error) {
+func SaveComment(emailHash string, text string, tag string, typ string, filePath string, pid int, name string) (int, error) {
 	timestamp := int32(utils.GetTimeStamp())
-	res, err := doCommentIns.Exec(emailHash, pid, text, tag, timestamp, name)
+	res, err := doCommentIns.Exec(emailHash, pid, text, tag, timestamp, typ, filePath, name)
 	if err != nil {
 		return -1, err
 	}
