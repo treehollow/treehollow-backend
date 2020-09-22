@@ -17,6 +17,7 @@ import (
 	"thuhole-go-backend/pkg/db"
 	"thuhole-go-backend/pkg/s3"
 	"thuhole-go-backend/pkg/utils"
+	"unicode/utf8"
 )
 
 func generateTag(text string) string {
@@ -40,8 +41,8 @@ func doPost(c *gin.Context) {
 	typ := c.PostForm("type")
 	token := c.PostForm("user_token")
 	img := c.PostForm("data")
-	if len(text) > consts.PostMaxLength {
-		utils.HttpReturnWithCodeOne(c, "字数过长！字数限制为"+strconv.Itoa(consts.PostMaxLength)+"字节。")
+	if utf8.RuneCountInString(text) > consts.PostMaxLength {
+		utils.HttpReturnWithCodeOne(c, "字数过长！字数限制为"+strconv.Itoa(consts.PostMaxLength)+"字。")
 		return
 	} else if len(text) == 0 && typ == "text" {
 		utils.HttpReturnWithCodeOne(c, "请输入内容")
@@ -135,8 +136,8 @@ func doComment(c *gin.Context) {
 	if typ != "image" {
 		typ = "text"
 	}
-	if len(text) > consts.CommentMaxLength {
-		utils.HttpReturnWithCodeOne(c, "字数过长！字数限制为"+strconv.Itoa(consts.CommentMaxLength)+"字节。")
+	if utf8.RuneCountInString(text) > consts.CommentMaxLength {
+		utils.HttpReturnWithCodeOne(c, "字数过长！字数限制为"+strconv.Itoa(consts.CommentMaxLength)+"字。")
 		return
 	} else if len(text) == 0 && typ == "text" {
 		utils.HttpReturnWithCodeOne(c, "请输入内容")
