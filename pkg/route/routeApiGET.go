@@ -271,21 +271,20 @@ func searchPost(c *gin.Context) {
 			httpReturnInfo(c, "cid不存在")
 			return
 		}
-		bannedTimes, err := db.BannedTimesPost(czEmailHash, -1)
-		if err != nil {
-			log.Printf("BannedTimesPost failed while delComment: %s\n", err)
-			httpReturnInfo(c, "error while getting banned times")
-			return
-		}
+		//bannedTimes, err := db.BannedTimesPost(czEmailHash, -1)
+		//if err != nil {
+		//	log.Printf("BannedTimesPost failed while delComment: %s\n", err)
+		//	httpReturnInfo(c, "error while getting banned times")
+		//	return
+		//}
 		_, err = db.PlusCommentReportIns.Exec(666, id)
 		if err != nil {
 			log.Printf("PlusCommentReportIns failed while delComment: %s\n", err)
 			httpReturnInfo(c, "error while updating reportnum")
 			return
 		}
-		msg := "您的树洞评论#" + strconv.Itoa(id) + "\n\"" + text + "\"\n被管理员删除。管理员的删除理由是：【" + reason + "】。这是您第" +
-			strconv.Itoa(bannedTimes+1) + "次被举报，在" + strconv.Itoa(bannedTimes+1) + "天之内您将无法发布树洞。"
-		err = db.SaveBanUser(czEmailHash, msg, (1+bannedTimes)*86400)
+		msg := "您的树洞评论#" + strconv.Itoa(id) + "\n\"" + text + "\"\n被管理员删除。管理员的删除理由是：【" + reason + "】。"
+		err = db.BanUser(czEmailHash, msg)
 		if err != nil {
 			log.Printf("error dbSaveBanUser while delComment: %s\n", err)
 			httpReturnInfo(c, "error while saving ban info")
