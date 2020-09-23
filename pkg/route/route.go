@@ -3,10 +3,8 @@ package route
 import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	libredis "github.com/go-redis/redis/v7"
 	"github.com/spf13/viper"
 	"github.com/ulule/limiter/v3"
-	sredis "github.com/ulule/limiter/v3/drivers/store/redis"
 	"log"
 	"net"
 	"net/http"
@@ -18,29 +16,11 @@ import (
 	"time"
 )
 
-var lmt *limiter.Limiter
-
-func initLimiter() {
-	rate := limiter.Rate{
-		Period: 24 * time.Hour,
-		Limit:  viper.GetInt64("max_email_per_ip_per_day"),
-	}
-	option, err := libredis.ParseURL(viper.GetString("redis_source"))
-	if err != nil {
-		utils.FatalErrorHandle(&err, "failed init redis url")
-		return
-	}
-	client := libredis.NewClient(option)
-	store, err2 := sredis.NewStoreWithOptions(client, limiter.StoreOptions{
-		Prefix:   "email_limiter",
-		MaxRetry: 3,
-	})
-	if err2 != nil {
-		utils.FatalErrorHandle(&err2, "failed init redis store")
-		return
-	}
-	lmt = limiter.New(store, rate)
-}
+var emailLimiter *limiter.Limiter
+var postLimiter *limiter.Limiter
+var postLimiter2 *limiter.Limiter
+var commentLimiter *limiter.Limiter
+var commentLimiter2 *limiter.Limiter
 
 func sendCode(c *gin.Context) {
 	code := utils.GenCode()
@@ -83,7 +63,7 @@ func sendCode(c *gin.Context) {
 		return
 	}
 
-	context, err2 := lmt.Get(c, c.ClientIP())
+	context, err2 := emailLimiter.Get(c, c.ClientIP())
 	if err2 != nil {
 		log.Printf("send mail to %s failed, limiter fatal error. IP=%s,err=%s\n", user, c.ClientIP(), err2)
 		c.AbortWithStatus(500)
@@ -255,6 +235,23 @@ func ServicesApiListenHttp() {
 	r := gin.Default()
 	r.Use(cors.Default())
 
+	postLimiter = utils.InitLimiter(limiter.Rate{
+		Period: 20 * time.Second,
+		Limit:  1,
+	}, "postLimiter")
+	postLimiter2 = utils.InitLimiter(limiter.Rate{
+		Period: 24 * time.Hour,
+		Limit:  50,
+	}, "postLimiter2")
+	commentLimiter = utils.InitLimiter(limiter.Rate{
+		Period: 5 * time.Second,
+		Limit:  1,
+	}, "commentLimiter")
+	commentLimiter2 = utils.InitLimiter(limiter.Rate{
+		Period: 24 * time.Hour,
+		Limit:  200,
+	}, "commentLimiter2")
+
 	r.GET("/api_xmcp/hole/system_msg", systemMsg)
 	r.GET("/services/thuhole/api.php", apiGet)
 	r.POST("/services/thuhole/api.php", apiPost)
@@ -265,7 +262,10 @@ func LoginApiListenHttp() {
 	r := gin.Default()
 	r.Use(cors.Default())
 
-	initLimiter()
+	emailLimiter = utils.InitLimiter(limiter.Rate{
+		Period: 24 * time.Hour,
+		Limit:  viper.GetInt64("max_email_per_ip_per_day"),
+	}, "emailLimiter")
 
 	r.POST("/api_xmcp/login/send_code", sendCode)
 	r.POST("/api_xmcp/login/login", login)

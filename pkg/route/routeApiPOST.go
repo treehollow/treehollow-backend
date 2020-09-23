@@ -67,6 +67,28 @@ func doPost(c *gin.Context) {
 		return
 	}
 
+	context, err5 := postLimiter.Get(c, emailHash)
+	if err5 != nil {
+		c.AbortWithStatus(500)
+		return
+	}
+	if context.Reached {
+		log.Printf("post limiter reached")
+		utils.HttpReturnWithCodeOne(c, "请不要短时间内连续发送树洞")
+		return
+	}
+
+	context, err5 = postLimiter2.Get(c, emailHash)
+	if err5 != nil {
+		c.AbortWithStatus(500)
+		return
+	}
+	if context.Reached {
+		log.Printf("post limiter 2 reached")
+		utils.HttpReturnWithCodeOne(c, "你24小时内已经发送太多树洞了")
+		return
+	}
+
 	var pid int
 	var err error
 	var imgPath string
@@ -186,6 +208,28 @@ func doComment(c *gin.Context) {
 			}
 			name = utils.GetCommenterName(i + 1)
 		}
+	}
+
+	context, err6 := commentLimiter.Get(c, emailHash)
+	if err6 != nil {
+		c.AbortWithStatus(500)
+		return
+	}
+	if context.Reached {
+		log.Printf("commment limiter reached")
+		utils.HttpReturnWithCodeOne(c, "请不要短时间内连续发送树洞回复")
+		return
+	}
+
+	context, err6 = commentLimiter2.Get(c, emailHash)
+	if err6 != nil {
+		c.AbortWithStatus(500)
+		return
+	}
+	if context.Reached {
+		log.Printf("commment limiter 2 reached")
+		utils.HttpReturnWithCodeOne(c, "你24小时内已经发送太多树洞回复了")
+		return
 	}
 
 	var imgPath string
