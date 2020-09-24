@@ -244,7 +244,7 @@ func ServicesApiListenHttp() {
 		Limit:  50,
 	}, "postLimiter2")
 	commentLimiter = utils.InitLimiter(limiter.Rate{
-		Period: 5 * time.Second,
+		Period: 10 * time.Second,
 		Limit:  1,
 	}, "commentLimiter")
 	commentLimiter2 = utils.InitLimiter(limiter.Rate{
