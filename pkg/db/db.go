@@ -225,15 +225,17 @@ func BannedTimesPost(dzEmailHash string, fromTimestamp int) (int, error) {
 }
 
 func BanUser(emailHash string, reason string) error {
-	var oldReason string
-	var oldTimestamp, expireTime, startTime int
-	err := getBannedOut.QueryRow(emailHash).Scan(&oldReason, &oldTimestamp, &expireTime)
+	//var oldReason string
+	//var oldTimestamp, expireTime, startTime int
+	//err := getBannedOut.QueryRow(emailHash).Scan(&oldReason, &oldTimestamp, &expireTime)
+	//timestamp := int(utils.GetTimeStamp())
+	//if err != nil || expireTime < timestamp {
+	//	startTime = timestamp
+	//} else {
+	//	startTime = expireTime
+	//}
 	timestamp := int(utils.GetTimeStamp())
-	if err != nil || expireTime < timestamp {
-		startTime = timestamp
-	} else {
-		startTime = expireTime
-	}
+	startTime := timestamp
 
 	bannedTimes, err2 := BannedTimesPost(emailHash, -1)
 	if err2 != nil {
@@ -241,7 +243,7 @@ func BanUser(emailHash string, reason string) error {
 	}
 
 	interval := (1 + bannedTimes) * 86400
-	_, err = banIns.Exec(emailHash, reason+"\n\n这是您第"+
+	_, err := banIns.Exec(emailHash, reason+"\n\n这是您第"+
 		strconv.Itoa(bannedTimes+1)+"次被举报，在"+time.Unix(int64(startTime+interval), 0).In(consts.TimeLoc).Format("01-02 15:04:05")+"之前您将无法发布树洞。", timestamp, startTime+interval)
 
 	return err
