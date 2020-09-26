@@ -3,6 +3,7 @@ package route
 import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/robfig/cron/v3"
 	"github.com/spf13/viper"
 	"github.com/ulule/limiter/v3"
 	"log"
@@ -251,6 +252,12 @@ func ServicesApiListenHttp() {
 		Period: 24 * time.Hour,
 		Limit:  200,
 	}, "commentLimiter2")
+
+	shutdownCountDown = 2
+	c := cron.New()
+	_, _ = c.AddFunc("0 0 * * *", func() {
+		shutdownCountDown = 2
+	})
 
 	r.GET("/api_xmcp/hole/system_msg", systemMsg)
 	r.GET("/services/thuhole/api.php", apiGet)

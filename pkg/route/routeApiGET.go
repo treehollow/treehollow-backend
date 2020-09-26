@@ -183,6 +183,7 @@ func httpReturnInfo(c *gin.Context, text string) {
 }
 
 var HotPosts []interface{}
+var shutdownCountDown int
 
 func searchPost(c *gin.Context) {
 	page, err := strconv.Atoi(c.Query("page"))
@@ -303,7 +304,11 @@ func searchPost(c *gin.Context) {
 	}
 
 	if isSuperUser && keywords == "shutdown" {
-		//httpReturnInfo(c, "Goodbye.")
+		if shutdownCountDown != 0 {
+			httpReturnInfo(c, strconv.Itoa(shutdownCountDown)+" more times to fully shutdown.")
+			shutdownCountDown -= 1
+			return
+		}
 		log.Printf("Super user " + token + " shutdown.")
 		os.Exit(0)
 		return
