@@ -302,7 +302,8 @@ func searchPost(c *gin.Context) {
 	}
 
 	if isSuperUser && keywords == "shutdown" {
-		httpReturnInfo(c, "Goodbye.")
+		//httpReturnInfo(c, "Goodbye.")
+		log.Printf("Super user " + token + " shutdown.")
 		os.Exit(0)
 		return
 	}
