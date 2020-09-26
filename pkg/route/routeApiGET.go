@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/viper"
 	"log"
 	"net/http"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -224,6 +225,7 @@ func searchPost(c *gin.Context) {
 	// Admin function
 	setTagRe := regexp.MustCompile(`^settag (.*) (pid=|cid=|)(\d+)$`)
 	_, isAdmin := utils.ContainsString(viper.GetStringSlice("admins_tokens"), token)
+	_, isSuperUser := utils.ContainsString(viper.GetStringSlice("super_user_tokens"), token)
 	if isAdmin && setTagRe.MatchString(keywords) {
 		log.Printf("admin search action: token=%s, keywords=%s\n", token, keywords)
 		strs := setTagRe.FindStringSubmatch(keywords)
@@ -296,6 +298,12 @@ func searchPost(c *gin.Context) {
 
 	if isAdmin && keywords == "statistics" {
 		httpReturnInfo(c, fmt.Sprintf("24h内注册用户：%d\n总注册用户：%d	", db.GetNewRegisterCountIn24h(), db.GetUserCount()))
+		return
+	}
+
+	if isSuperUser && keywords == "shutdown" {
+		httpReturnInfo(c, "Goodbye.")
+		os.Exit(0)
 		return
 	}
 
