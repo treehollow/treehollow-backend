@@ -304,13 +304,13 @@ func searchPost(c *gin.Context) {
 	}
 
 	if isSuperUser && keywords == "shutdown" {
-		if shutdownCountDown != 0 {
+		log.Printf("Super user " + token + " shutdown. shutdownCountDown=" + strconv.Itoa(shutdownCountDown))
+		if shutdownCountDown > 0 {
 			httpReturnInfo(c, strconv.Itoa(shutdownCountDown)+" more times to fully shutdown.")
 			shutdownCountDown -= 1
-			return
+		} else {
+			os.Exit(0)
 		}
-		log.Printf("Super user " + token + " shutdown.")
-		os.Exit(0)
 		return
 	}
 
