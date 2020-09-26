@@ -316,7 +316,7 @@ func searchPost(c *gin.Context) {
 
 ***
 
-[了解更多](https://www.zhihu.com/answer/106073121) &nbsp; &nbsp; &nbsp; [展示结果](https://thuhole.com/#` + url.QueryEscape(" "+keywords) + `)`
+[了解更多](https://www.zhihu.com/answer/106073121) &nbsp; &nbsp; &nbsp; [展示结果](https://thuhole.com/#%20` + url.QueryEscape(keywords) + `)`
 		httpReturnInfo(c, msg)
 		return
 	}
