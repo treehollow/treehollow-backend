@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/viper"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"regexp"
 	"strconv"
@@ -167,7 +168,7 @@ func httpReturnInfo(c *gin.Context, text string) {
 	c.JSON(http.StatusOK, gin.H{
 		"code": 0,
 		"data": []map[string]interface{}{gin.H{
-			"pid":       66666666,
+			"pid":       0,
 			"text":      text,
 			"type":      "text",
 			"timestamp": utils.GetTimeStamp(),
@@ -305,6 +306,18 @@ func searchPost(c *gin.Context) {
 		//httpReturnInfo(c, "Goodbye.")
 		log.Printf("Super user " + token + " shutdown.")
 		os.Exit(0)
+		return
+	}
+
+	if strings.Contains(keywords, "自杀") && !strings.HasPrefix(keywords, " ") {
+		msg := `需要帮助？
+北京24小时心理援助热线：010-8295-1332
+希望24小时热线：400-161-9995
+
+***
+
+[了解更多](https://www.zhihu.com/answer/106073121) &nbsp; &nbsp; &nbsp; [展示结果](https://thuhole.com/#` + url.QueryEscape(" "+keywords) + `)`
+		httpReturnInfo(c, msg)
 		return
 	}
 
