@@ -22,6 +22,8 @@ var postLimiter *limiter.Limiter
 var postLimiter2 *limiter.Limiter
 var commentLimiter *limiter.Limiter
 var commentLimiter2 *limiter.Limiter
+var getOneLimiter *limiter.Limiter
+var doAttentionLimiter *limiter.Limiter
 
 func sendCode(c *gin.Context) {
 	code := utils.GenCode()
@@ -252,6 +254,14 @@ func ServicesApiListenHttp() {
 		Period: 24 * time.Hour,
 		Limit:  200,
 	}, "commentLimiter2")
+	getOneLimiter = utils.InitLimiter(limiter.Rate{
+		Period: 24 * time.Hour,
+		Limit:  5000,
+	}, "getOneLimiter")
+	doAttentionLimiter = utils.InitLimiter(limiter.Rate{
+		Period: 24 * time.Hour,
+		Limit:  2000,
+	}, "doAttentionLimiter")
 
 	shutdownCountDown = 2
 	c := cron.New()

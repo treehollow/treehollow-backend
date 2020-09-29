@@ -25,9 +25,20 @@ func getOne(c *gin.Context) {
 
 	token := c.Query("user_token")
 	if !viper.GetBool("allow_unregistered_access") && !utils.IsInAllowedSubnet(c.ClientIP()) {
-		_, err5 := db.GetInfoByToken(token)
+		emailHash, err5 := db.GetInfoByToken(token)
 		if err5 != nil {
 			c.AbortWithStatus(401)
+			return
+		}
+
+		context, err6 := getOneLimiter.Get(c, emailHash)
+		if err6 != nil {
+			c.AbortWithStatus(500)
+			return
+		}
+		if context.Reached {
+			log.Printf("getone limiter reached")
+			utils.HttpReturnWithCodeOne(c, "你今天刷了太多树洞了，明天再来吧")
 			return
 		}
 	}
@@ -103,6 +114,11 @@ func getList(c *gin.Context) {
 	p, err := strconv.Atoi(c.Query("p"))
 	if err != nil {
 		utils.HttpReturnWithCodeOne(c, "获取失败，参数p不合法")
+		return
+	}
+
+	if p > consts.MaxPage || p <= 0 {
+		utils.HttpReturnWithCodeOne(c, "获取失败，参数p超出范围")
 		return
 	}
 

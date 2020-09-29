@@ -4,6 +4,7 @@ import "time"
 
 //const AttentionMaxCount = 100
 const PageSize = 30
+const MaxPage = 150
 const SearchMaxPageSize = 50
 const SearchMaxPage = 60
 const SearchMaxLength = 80

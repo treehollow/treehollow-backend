@@ -73,7 +73,7 @@ func doPost(c *gin.Context) {
 		return
 	}
 	if context.Reached {
-		log.Printf("post limiter reached")
+		//log.Printf("post limiter reached")
 		utils.HttpReturnWithCodeOne(c, "请不要短时间内连续发送树洞")
 		return
 	}
@@ -216,7 +216,7 @@ func doComment(c *gin.Context) {
 		return
 	}
 	if context.Reached {
-		log.Printf("commment limiter reached")
+		//log.Printf("comment limiter reached")
 		utils.HttpReturnWithCodeOne(c, "请不要短时间内连续发送树洞回复")
 		return
 	}
@@ -400,6 +400,18 @@ func doAttention(c *gin.Context) {
 		utils.HttpReturnWithCodeOne(c, "关注失败，请检查登录状态")
 		return
 	}
+
+	context, err6 := doAttentionLimiter.Get(c, emailHash)
+	if err6 != nil {
+		c.AbortWithStatus(500)
+		return
+	}
+	if context.Reached {
+		log.Printf("do_attention limiter limiter reached")
+		utils.HttpReturnWithCodeOne(c, "你今天关注太多树洞了，明天再来吧")
+		return
+	}
+
 	isAttention, err2 := db.IsAttention(emailHash, pid)
 	if err2 != nil {
 		log.Printf("error dbIsAttention while doAttention: %s\n", err2)
