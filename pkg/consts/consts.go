@@ -14,9 +14,6 @@ const ReportMaxLength = 1000
 const ImgMaxLength = 2000000
 const Base64Rate = 1.33333333
 
-////const ListenAddress = "127.0.0.1:3001"
-//const ServicesApiListenAddress = "127.0.0.1:5001"
-//const LoginApiListenAddress = "127.0.0.1:5002"
 const ServicesApiLogFile = "services-api.log"
 const LoginApiLogFile = "login-api.log"
 

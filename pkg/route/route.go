@@ -220,20 +220,6 @@ func systemMsg(c *gin.Context) {
 	}
 }
 
-//func ListenHttp() {
-//	r := gin.Default()
-//	r.Use(cors.Default())
-//
-//	initLimiter()
-//
-//	r.POST("/api_xmcp/login/send_code", sendCode)
-//	r.POST("/api_xmcp/login/login", login)
-//	r.GET("/api_xmcp/hole/system_msg", systemMsg)
-//	r.GET("/services/thuhole/api.php", apiGet)
-//	r.POST("/services/thuhole/api.php", apiPost)
-//	_ = r.Run(consts.ListenAddress)
-//}
-
 func ServicesApiListenHttp() {
 	r := gin.Default()
 	r.Use(cors.Default())

@@ -18,6 +18,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 func DogeCloudAPI(apiPath string, data map[string]interface{}, jsonMode bool) (ret map[string]interface{}, err error) {
@@ -54,7 +55,7 @@ func DogeCloudAPI(apiPath string, data map[string]interface{}, jsonMode bool) (r
 	}
 	req.Header.Add("Content-Type", mime)
 	req.Header.Add("Authorization", Authorization)
-	client := http.Client{}
+	client := http.Client{Timeout: 15 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
 		return
