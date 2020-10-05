@@ -14,6 +14,7 @@ import (
 	"thuhole-go-backend/pkg/consts"
 	"thuhole-go-backend/pkg/db"
 	"thuhole-go-backend/pkg/utils"
+	"unicode/utf8"
 )
 
 func getOne(c *gin.Context) {
@@ -224,8 +225,13 @@ func searchPost(c *gin.Context) {
 
 	keywords := c.Query("keywords")
 
-	if len(keywords) > consts.SearchMaxLength {
+	if utf8.RuneCountInString(keywords) > consts.SearchMaxLength {
 		utils.HttpReturnWithCodeOne(c, "搜索内容过长")
+		return
+	}
+
+	if utf8.RuneCountInString(keywords) <= 1 {
+		utils.HttpReturnWithCodeOne(c, "搜索内容过短")
 		return
 	}
 
