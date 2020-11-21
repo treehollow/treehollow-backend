@@ -148,6 +148,7 @@ func getList(c *gin.Context) {
 	}
 
 	var maxPid int
+	var configInfo gin.H
 	maxPid, err = db.GetMaxPid()
 	if err != nil {
 		log.Printf("dbGetMaxPid failed: %s\n", err)
@@ -168,27 +169,38 @@ func getList(c *gin.Context) {
 		return
 	} else {
 		pinnedPids := viper.GetIntSlice("pin_pids")
-		if len(pinnedPids) > 0 && p == 1 {
-			pinnedData, err3 := db.GetPostsByPidList(pinnedPids)
-			if err3 != nil {
-				log.Printf("get pinned post failed: %s\n", err2)
-				utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
-				return
-			} else {
-				rtnData := append(pinnedData, data...)
-				utils.ProcessExtra(rtnData, emailHash, "pid")
-				c.JSON(http.StatusOK, gin.H{
-					"code":      0,
-					"data":      rtnData,
-					"timestamp": utils.GetTimeStamp(),
-					"count":     utils.IfThenElse(data != nil, len(rtnData), 0),
-				})
+		if p == 1 {
+			configInfo = gin.H{
+				"img_base_url":         viper.GetString("img_base_url"),
+				"img_base_url_bak":     viper.GetString("img_base_url_bak"),
+				"fold_tags":            viper.GetStringSlice("fold_tags"),
+				"web_frontend_version": viper.GetString("web_frontend_version"),
+				"announcement":         viper.GetString("announcement"),
+			}
+			if len(pinnedPids) > 0 {
+				pinnedData, err3 := db.GetPostsByPidList(pinnedPids)
+				if err3 != nil {
+					log.Printf("get pinned post failed: %s\n", err2)
+					utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
+					return
+				} else {
+					rtnData := append(pinnedData, data...)
+					utils.ProcessExtra(rtnData, emailHash, "pid")
+					c.JSON(http.StatusOK, gin.H{
+						"code":      0,
+						"data":      rtnData,
+						"config":    configInfo,
+						"timestamp": utils.GetTimeStamp(),
+						"count":     utils.IfThenElse(data != nil, len(rtnData), 0),
+					})
+				}
 			}
 		} else {
 			utils.ProcessExtra(data, emailHash, "pid")
 			c.JSON(http.StatusOK, gin.H{
 				"code":      0,
 				"data":      utils.IfThenElse(data != nil, data, []string{}),
+				"config":    configInfo,
 				"timestamp": utils.GetTimeStamp(),
 				"count":     utils.IfThenElse(data != nil, len(data), 0),
 			})
