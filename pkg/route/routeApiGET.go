@@ -25,9 +25,10 @@ func getOne(c *gin.Context) {
 	}
 
 	token := c.Query("user_token")
+	var emailHash string
 	if !viper.GetBool("allow_unregistered_access") && !utils.IsInAllowedSubnet(c.ClientIP()) {
-		emailHash, err5 := db.GetInfoByToken(token)
-		if err5 != nil {
+		emailHash, err = db.GetInfoByToken(token)
+		if err != nil {
 			c.AbortWithStatus(401)
 			return
 		}
@@ -57,7 +58,7 @@ func getOne(c *gin.Context) {
 				"pid":       pid,
 				"text":      text,
 				"type":      typ,
-				"timestamp": timestamp,
+				"timestamp": timestamp - utils.CalcExtra(emailHash, strconv.Itoa(pid)),
 				"reply":     replynum,
 				"likenum":   likenum,
 				"url":       utils.GetHashedFilePath(filePath),
@@ -77,10 +78,22 @@ func getComment(c *gin.Context) {
 	}
 	token := c.Query("user_token")
 	attention := 0
+	var emailHash string
 	if len(token) == 32 {
-		emailHash, err := db.GetInfoByToken(token)
+		emailHash, err = db.GetInfoByToken(token)
 		if err == nil {
 			attention, _ = db.IsAttention(emailHash, pid)
+
+			context, err6 := getCommentLimiter.Get(c, emailHash)
+			if err6 != nil {
+				c.AbortWithStatus(500)
+				return
+			}
+			if context.Reached {
+				log.Printf("getcomment limiter reached")
+				utils.HttpReturnWithCodeOne(c, "你今天刷了太多树洞了，明天再来吧")
+				return
+			}
 		} else if !viper.GetBool("allow_unregistered_access") && !utils.IsInAllowedSubnet(c.ClientIP()) {
 			c.AbortWithStatus(401)
 			return
@@ -97,6 +110,7 @@ func getComment(c *gin.Context) {
 		return
 	}
 	data, err2 := db.GetSavedComments(pid)
+	utils.ProcessExtra(data, emailHash, "cid")
 	if err2 != nil {
 		log.Printf("dbGetSavedComments failed: %s\n", err2)
 		utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
@@ -124,10 +138,10 @@ func getList(c *gin.Context) {
 	}
 
 	token := c.Query("user_token")
+	var emailHash string
 	if !viper.GetBool("allow_unregistered_access") && !utils.IsInAllowedSubnet(c.ClientIP()) {
-		_, err5 := db.GetInfoByToken(token)
-		if err5 != nil {
-			//c.AbortWithStatus(401)
+		emailHash, err = db.GetInfoByToken(token)
+		if err != nil {
 			utils.HttpReturnWithCodeOne(c, "登录凭据过期，请使用邮箱重新登录。")
 			return
 		}
@@ -162,6 +176,7 @@ func getList(c *gin.Context) {
 				return
 			} else {
 				rtnData := append(pinnedData, data...)
+				utils.ProcessExtra(rtnData, emailHash, "pid")
 				c.JSON(http.StatusOK, gin.H{
 					"code":      0,
 					"data":      rtnData,
@@ -170,6 +185,7 @@ func getList(c *gin.Context) {
 				})
 			}
 		} else {
+			utils.ProcessExtra(data, emailHash, "pid")
 			c.JSON(http.StatusOK, gin.H{
 				"code":      0,
 				"data":      utils.IfThenElse(data != nil, data, []string{}),
@@ -199,7 +215,7 @@ func httpReturnInfo(c *gin.Context, text string) {
 	})
 }
 
-var HotPosts []interface{}
+var HotPosts []gin.H
 var shutdownCountDown int
 
 func searchPost(c *gin.Context) {
@@ -215,10 +231,22 @@ func searchPost(c *gin.Context) {
 	}
 
 	token := c.Query("user_token")
+	var emailHash string
 	if !viper.GetBool("allow_unregistered_access") && !utils.IsInAllowedSubnet(c.ClientIP()) {
-		_, err5 := db.GetInfoByToken(token)
-		if err5 != nil {
+		emailHash, err = db.GetInfoByToken(token)
+		if err != nil {
 			c.AbortWithStatus(401)
+			return
+		}
+
+		context, err6 := searchLimiter.Get(c, emailHash)
+		if err6 != nil {
+			c.AbortWithStatus(500)
+			return
+		}
+		if context.Reached {
+			log.Printf("search limiter reached")
+			utils.HttpReturnWithCodeOne(c, "你今天search了太多树洞了，明天再来吧")
 			return
 		}
 	}
@@ -237,6 +265,7 @@ func searchPost(c *gin.Context) {
 
 	if keywords == "热榜" {
 		rtn := utils.SafeSubSlice(HotPosts, (page-1)*pageSize, page*pageSize)
+		utils.ProcessExtra(rtn, emailHash, "pid")
 		c.JSON(http.StatusOK, gin.H{
 			"code":      0,
 			"data":      utils.IfThenElse(rtn != nil, rtn, []string{}),
@@ -348,7 +377,7 @@ func searchPost(c *gin.Context) {
 		return
 	}
 
-	var data []interface{}
+	var data []gin.H
 	if isAdmin && keywords == "deleted" {
 		data, err = db.GetDeletedPosts((page-1)*pageSize, pageSize)
 	} else if isAdmin && keywords == "bans" {
@@ -363,6 +392,7 @@ func searchPost(c *gin.Context) {
 		utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
 		return
 	} else {
+		utils.ProcessExtra(data, emailHash, "pid")
 		c.JSON(http.StatusOK, gin.H{
 			"code":      0,
 			"data":      utils.IfThenElse(data != nil, data, []string{}),

@@ -256,8 +256,8 @@ func BanUser(emailHash string, reason string) error {
 //	return err
 //}
 
-func parsePostsRows(rows *sql.Rows, err error) ([]interface{}, error) {
-	var rtn []interface{}
+func parsePostsRows(rows *sql.Rows, err error) ([]gin.H, error) {
+	var rtn []gin.H
 	if err != nil {
 		return nil, err
 	}
@@ -302,22 +302,22 @@ func GetUserCount() int {
 	return rtn
 }
 
-func GetPostsByPidList(pids []int) ([]interface{}, error) {
+func GetPostsByPidList(pids []int) ([]gin.H, error) {
 	rows, err := db.Query("SELECT pid, email_hash, text, timestamp, tag, type, file_path, likenum, replynum, reportnum FROM posts WHERE pid IN (" + utils.SplitToString(pids, ",") + ") AND reportnum<10 ORDER BY pid DESC")
 	return parsePostsRows(rows, err)
 }
 
-func GetHotPosts() ([]interface{}, error) {
+func GetHotPosts() ([]gin.H, error) {
 	rows, err := hotPostsOut.Query()
 	return parsePostsRows(rows, err)
 }
 
-func SearchSavedPosts(str string, tag string, pid string, limitMin int, searchPageSize int) ([]interface{}, error) {
+func SearchSavedPosts(str string, tag string, pid string, limitMin int, searchPageSize int) ([]gin.H, error) {
 	rows, err := searchOut.Query(str, tag, pid, limitMin, searchPageSize)
 	return parsePostsRows(rows, err)
 }
 
-func GetDeletedPosts(limitMin int, searchPageSize int) ([]interface{}, error) {
+func GetDeletedPosts(limitMin int, searchPageSize int) ([]gin.H, error) {
 	rows, err := deletedOut.Query(limitMin, searchPageSize)
 	return parsePostsRows(rows, err)
 }
@@ -345,8 +345,8 @@ func getReportsText(pid int) (string, error) {
 	return rtn, nil
 }
 
-func GetReports(limitMin int, searchPageSize int) ([]interface{}, error) {
-	var rtn []interface{}
+func GetReports(limitMin int, searchPageSize int) ([]gin.H, error) {
+	var rtn []gin.H
 	rows, err := reportedPostsOut.Query(limitMin, searchPageSize)
 	if err != nil {
 		return nil, err
@@ -379,8 +379,8 @@ func GetReports(limitMin int, searchPageSize int) ([]interface{}, error) {
 	return rtn, nil
 }
 
-func GetBans(limitMin int, searchPageSize int) ([]interface{}, error) {
-	var rtn []interface{}
+func GetBans(limitMin int, searchPageSize int) ([]gin.H, error) {
+	var rtn []gin.H
 	rows, err := bansOut.Query(limitMin, searchPageSize)
 	if err != nil {
 		return nil, err
@@ -411,8 +411,8 @@ func GetBans(limitMin int, searchPageSize int) ([]interface{}, error) {
 	return rtn, nil
 }
 
-func GetSavedPosts(pidMin int, pidMax int) ([]interface{}, error) {
-	var rtn []interface{}
+func GetSavedPosts(pidMin int, pidMax int) ([]gin.H, error) {
+	var rtn []gin.H
 	rows, err := getPostsOut.Query(pidMin, pidMax)
 	if err != nil {
 		return nil, err
@@ -483,8 +483,8 @@ func GetBannedMsgs(emailHash string) ([]interface{}, error) {
 	return rtn, nil
 }
 
-func GetSavedComments(pid int) ([]interface{}, error) {
-	var rtn []interface{}
+func GetSavedComments(pid int) ([]gin.H, error) {
+	var rtn []gin.H
 	rows, err := getCommentsOut.Query(pid)
 	if err != nil {
 		return nil, err
@@ -556,8 +556,8 @@ func GetCommentCount(pid int, dzEmailHash string) (int, error) {
 	return int(rtn), err
 }
 
-func SavePost(emailHash string, text string, tag string, typ string, filePath string) (int, error) {
-	timestamp := int32(utils.GetTimeStamp())
+func SavePost(emailHash string, text string, timestamp int, tag string, typ string, filePath string) (int, error) {
+	//timestamp := int32(utils.GetTimeStamp())
 	res, err := doPostIns.Exec(emailHash, text, timestamp, tag, typ, filePath)
 	if err != nil {
 		return -1, err
@@ -571,8 +571,8 @@ func SavePost(emailHash string, text string, tag string, typ string, filePath st
 	}
 }
 
-func SaveComment(emailHash string, text string, tag string, typ string, filePath string, pid int, name string) (int, error) {
-	timestamp := int32(utils.GetTimeStamp())
+func SaveComment(emailHash string, text string, tag string, timestamp int, typ string, filePath string, pid int, name string) (int, error) {
+	//timestamp := int32(utils.GetTimeStamp())
 	res, err := doCommentIns.Exec(emailHash, pid, text, tag, timestamp, typ, filePath, name)
 	if err != nil {
 		return -1, err
@@ -605,4 +605,23 @@ func GetInfoByToken(token string) (string, error) {
 	var emailHash string
 	err := getInfoOut.QueryRow(token).Scan(&emailHash)
 	return emailHash, err
+}
+
+func GenCommenterName(dzEmailHash string, czEmailHash string, pid int, names0 []string, names1 []string) (string, error) {
+	var name string
+	var err error
+	if dzEmailHash == czEmailHash {
+		name = consts.DzName
+	} else {
+		name, err = GetCommentNameByEmailHash(czEmailHash, pid)
+		if err != nil { // token is not in comments
+			var i int
+			i, err = GetCommentCount(pid, dzEmailHash)
+			if err != nil {
+				return "", err
+			}
+			name = utils.GetCommenterName(i+1, names0, names1)
+		}
+	}
+	return name, nil
 }

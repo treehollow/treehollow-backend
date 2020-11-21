@@ -2,14 +2,10 @@ package route
 
 import (
 	"bytes"
-	"encoding/base64"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
-	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -21,7 +17,7 @@ import (
 )
 
 func generateTag(text string) string {
-	re := regexp.MustCompile(`[#＃](性相关|性话题|政治相关|政治话题|NSFW|nsfw|折叠)`)
+	re := regexp.MustCompile(`[#＃](性相关|政治相关|引战|未经证实的传闻|令人不适|NSFW|nsfw|折叠)`)
 	if re.MatchString(text) {
 		return strings.ToUpper(re.FindStringSubmatch(text)[1])
 	}
@@ -60,12 +56,6 @@ func doPost(c *gin.Context) {
 		utils.HttpReturnWithCodeOne(c, "发送失败，请检查登录状态")
 		return
 	}
-	timestamp := int(utils.GetTimeStamp())
-	bannedTimes, _ := db.BannedTimesPost(emailHash, timestamp)
-	if bannedTimes > 0 {
-		utils.HttpReturnWithCodeOne(c, "很抱歉，您当前处于禁言状态，无法发送树洞。")
-		return
-	}
 
 	context, err5 := postLimiter.Get(c, emailHash)
 	if err5 != nil {
@@ -89,63 +79,59 @@ func doPost(c *gin.Context) {
 		return
 	}
 
+	timestamp := int(utils.GetTimeStamp())
+	bannedTimes, _ := db.BannedTimesPost(emailHash, timestamp)
+	if bannedTimes > 0 {
+		utils.HttpReturnWithCodeOne(c, "很抱歉，您当前处于禁言状态，无法发送树洞。")
+		return
+	}
+
+	tag := generateTag(text)
+
 	var pid int
 	var err error
 	var imgPath string
+	var uploadChan chan bool
+	uploadChan = nil
 	if typ == "image" {
 		imgPath = utils.GenToken()
-		sDec, err2 := base64.StdEncoding.DecodeString(img)
+		sDec, suffix, err2 := utils.SaveImage(img, imgPath)
 		if err2 != nil {
-			c.JSON(http.StatusOK, gin.H{
-				"code": 1,
-				"msg":  "发送失败，图片数据不合法",
-			})
-			return
-		}
-		fileType := http.DetectContentType(sDec)
-		if fileType != "image/jpeg" && fileType != "image/jpg" {
-			c.JSON(http.StatusOK, gin.H{
-				"code": 1,
-				"msg":  "发送失败，图片数据不合法",
-			})
-			return
-		}
-		hashedPath := filepath.Join(viper.GetString("images_path"), imgPath[:2])
-		_ = os.MkdirAll(hashedPath, os.ModePerm)
-		err3 := ioutil.WriteFile(filepath.Join(hashedPath, imgPath+".jpeg"), sDec, 0644)
-		if err3 != nil {
-			c.JSON(http.StatusOK, gin.H{
-				"code": 1,
-				"msg":  "图片写入失败，请联系管理员",
-			})
+			utils.HttpReturnWithCodeOne(c, err2.Error())
 			return
 		}
 
-		pid, err = db.SavePost(emailHash, text, generateTag(text), typ, imgPath+".jpeg")
+		pid, err = db.SavePost(emailHash, text, timestamp, tag, typ, imgPath+suffix)
 		if err == nil && len(viper.GetString("DCSecretKey")) > 0 {
-			err4 := s3.Upload(imgPath[:2]+"/"+imgPath+".jpeg", bytes.NewReader(sDec))
-			if err4 != nil {
-				log.Printf("S3 upload failed, err=%s\n", err4)
-			}
+			uploadChan = make(chan bool, 1)
+			go func() {
+				err4 := s3.Upload(imgPath[:2]+"/"+imgPath+suffix, bytes.NewReader(sDec))
+				if err4 != nil {
+					log.Printf("S3 upload failed, err=%s\n", err4)
+				}
+				uploadChan <- true
+			}()
 		}
 	} else {
-		pid, err = db.SavePost(emailHash, text, generateTag(text), typ, "")
+		pid, err = db.SavePost(emailHash, text, timestamp, tag, typ, "")
 	}
 
 	if err != nil {
 		log.Printf("error dbSavePost! %s\n", err)
-		c.JSON(http.StatusOK, gin.H{
-			"code": 1,
-			"msg":  "数据库写入失败，请联系管理员",
-		})
+		utils.HttpReturnWithCodeOne(c, "数据库写入失败，请联系管理员")
 		return
 	} else {
+		if uploadChan != nil {
+			//wait until upload complete.
+			<-uploadChan
+		}
+
+		_, _ = db.AddAttentionIns.Exec(emailHash, pid)
+		_, _ = db.PlusOneAttentionIns.Exec(pid)
 		c.JSON(http.StatusOK, gin.H{
 			"code": 0,
 			"data": pid,
 		})
-		_, _ = db.AddAttentionIns.Exec(emailHash, pid)
-		_, _ = db.PlusOneAttentionIns.Exec(pid)
 		return
 	}
 }
@@ -178,37 +164,6 @@ func doComment(c *gin.Context) {
 		utils.HttpReturnWithCodeOne(c, "发送失败，请检查登录状态")
 		return
 	}
-	timestamp := int(utils.GetTimeStamp())
-	bannedTimes, _ := db.BannedTimesPost(emailHash, timestamp)
-	if bannedTimes > 0 {
-		utils.HttpReturnWithCodeOne(c, "很抱歉，您当前处于禁言状态，无法发送评论。")
-		return
-	}
-	var dzEmailHash string
-	dzEmailHash, _, _, _, _, _, _, _, _, err = db.GetOnePost(pid)
-	if err != nil {
-		utils.HttpReturnWithCodeOne(c, "发送失败，pid不存在")
-		return
-	}
-
-	var name string
-	if dzEmailHash == emailHash {
-		name = consts.DzName
-	} else {
-		name, err = db.GetCommentNameByEmailHash(emailHash, pid)
-		if err != nil { // token is not in comments
-			var i int
-			i, err = db.GetCommentCount(pid, dzEmailHash)
-			if err != nil {
-				c.JSON(http.StatusOK, gin.H{
-					"code": 1,
-					"msg":  "数据库读取失败，请联系管理员",
-				})
-				return
-			}
-			name = utils.GetCommenterName(i + 1)
-		}
-	}
 
 	context, err6 := commentLimiter.Get(c, emailHash)
 	if err6 != nil {
@@ -232,56 +187,64 @@ func doComment(c *gin.Context) {
 		return
 	}
 
+	timestamp := int(utils.GetTimeStamp())
+	bannedTimes, _ := db.BannedTimesPost(emailHash, timestamp)
+	if bannedTimes > 0 {
+		utils.HttpReturnWithCodeOne(c, "很抱歉，您当前处于禁言状态，无法发送评论。")
+		return
+	}
+	dzEmailHash, _, _, _, _, _, _, _, _, err := db.GetOnePost(pid)
+	if err != nil {
+		utils.HttpReturnWithCodeOne(c, "发送失败，pid不存在")
+		return
+	}
+
+	var name string
+	var names0, names1 []string
+
+	names0, names1 = consts.Names0, consts.Names1
+	commentMux.Lock()
+
+	name, err = db.GenCommenterName(dzEmailHash, emailHash, pid, names0, names1)
+	if err != nil {
+		log.Printf("error GenCommenterName in doComment(), err=%s\n", err.Error())
+		utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
+		commentMux.Unlock()
+		return
+	}
+
 	var imgPath string
+	var uploadChan chan bool
+	uploadChan = nil
 	if typ == "image" {
 		imgPath = utils.GenToken()
-		sDec, err2 := base64.StdEncoding.DecodeString(img)
+		sDec, suffix, err2 := utils.SaveImage(img, imgPath)
 		if err2 != nil {
-			c.JSON(http.StatusOK, gin.H{
-				"code": 1,
-				"msg":  "发送失败，图片数据不合法",
-			})
-			return
-		}
-		fileType := http.DetectContentType(sDec)
-		if fileType != "image/jpeg" && fileType != "image/jpg" {
-			c.JSON(http.StatusOK, gin.H{
-				"code": 1,
-				"msg":  "发送失败，图片数据不合法",
-			})
-			return
-		}
-		hashedPath := filepath.Join(viper.GetString("images_path"), imgPath[:2])
-		_ = os.MkdirAll(hashedPath, os.ModePerm)
-		err3 := ioutil.WriteFile(filepath.Join(hashedPath, imgPath+".jpeg"), sDec, 0644)
-		if err3 != nil {
-			c.JSON(http.StatusOK, gin.H{
-				"code": 1,
-				"msg":  "图片写入失败，请联系管理员",
-			})
+			utils.HttpReturnWithCodeOne(c, err2.Error())
+			commentMux.Unlock()
 			return
 		}
 
-		_, err = db.SaveComment(emailHash, text, "", typ, imgPath+".jpeg", pid, name)
+		_, err = db.SaveComment(emailHash, text, "", timestamp, typ, imgPath+suffix, pid, name)
 		if err == nil && len(viper.GetString("DCSecretKey")) > 0 {
-			err4 := s3.Upload(imgPath[:2]+"/"+imgPath+".jpeg", bytes.NewReader(sDec))
-			if err4 != nil {
-				log.Printf("S3 upload failed, err=%s\n", err4)
-			}
+			uploadChan = make(chan bool, 1)
+			go func() {
+				err4 := s3.Upload(imgPath[:2]+"/"+imgPath+suffix, bytes.NewReader(sDec))
+				if err4 != nil {
+					log.Printf("S3 upload failed, err=%s\n", err4)
+				}
+				uploadChan <- true
+			}()
 		}
 	} else {
-		_, err = db.SaveComment(emailHash, text, "", "text", "", pid, name)
+		_, err = db.SaveComment(emailHash, text, "", timestamp, "text", "", pid, name)
 	}
-	//_, err = db.SaveComment(emailHash, text, "", "text", "", pid, name)
+	commentMux.Unlock()
 
 	if err != nil {
 		utils.HttpReturnWithCodeOne(c, "数据库写入失败，请联系管理员")
 		return
 	} else {
-		c.JSON(http.StatusOK, gin.H{
-			"code": 0,
-			"data": pid,
-		})
 
 		_, err = db.PlusOneCommentIns.Exec(pid)
 		if err != nil {
@@ -295,12 +258,22 @@ func doComment(c *gin.Context) {
 
 		// set tag
 		if dzEmailHash == emailHash {
-			re := regexp.MustCompile(`[#＃](性相关|性话题|政治相关|政治话题|NSFW|nsfw|折叠|重复内容)`)
+			re := regexp.MustCompile(`[#＃](性相关|政治相关|引战|未经证实的传闻|令人不适|NSFW|nsfw|折叠|重复内容)`)
 			if re.MatchString(text) {
 				tag := strings.ToUpper(re.FindStringSubmatch(text)[1])
 				_, _ = db.SetPostTagIns.Exec(tag, pid)
 			}
 		}
+
+		if uploadChan != nil {
+			//wait until upload complete.
+			<-uploadChan
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"code": 0,
+			"data": pid,
+		})
 	}
 }
 
@@ -342,12 +315,10 @@ func doReport(c *gin.Context) {
 			if err != nil {
 				log.Printf("error plusOneReportIns while reporting: %s\n", err)
 			}
-			////禁言
-			//bannedTimes, _ := db.BannedTimesPost(dzEmailHash, -1)
-			//err = db.SaveBanUser(dzEmailHash,
-			//	"您的"+typ+"树洞#"+strconv.Itoa(pid)+"\n\""+text+"\"\n由于用户举报过多被删除。",
-			//	(1+bannedTimes)*86400)
-			err = db.BanUser(dzEmailHash, "您的"+typ+"树洞#"+strconv.Itoa(pid)+"\n\""+text+"\"\n由于用户举报过多被删除。")
+
+			msg := "您的" + typ + "树洞" + strconv.Itoa(pid) + "\n\"" + text + "\"\n由于用户举报过多被删除。"
+
+			err = db.BanUser(dzEmailHash, msg)
 			if err != nil {
 				log.Printf("error dbSaveBanUser while reporting: %s\n", err)
 			}
@@ -356,11 +327,10 @@ func doReport(c *gin.Context) {
 			if err != nil {
 				log.Printf("error plus666ReportIns while reporting: %s\n", err)
 			}
-			//bannedTimes, _ := db.BannedTimesPost(dzEmailHash, -1)
-			//err = db.SaveBanUser(dzEmailHash,
-			//	"您的"+typ+"树洞#"+strconv.Itoa(pid)+"\n\""+text+"\"\n被管理员删除。管理员的删除理由是：【"+reason+"】。",
-			//	(1+bannedTimes)*86400)
-			err = db.BanUser(dzEmailHash, "您的"+typ+"树洞#"+strconv.Itoa(pid)+"\n\""+text+"\"\n被管理员删除。管理员的删除理由是：【"+reason+"】。")
+
+			msg := "您的" + typ + "树洞" + strconv.Itoa(pid) + "\n\"" + text + "\"\n被管理员删除。管理员的删除理由是：【" + reason + "】。"
+
+			err = db.BanUser(dzEmailHash, msg)
 			if err != nil {
 				log.Printf("error dbSaveBanUser while reporting: %s\n", err)
 			}
@@ -372,7 +342,7 @@ func doReport(c *gin.Context) {
 		}
 
 		if err != nil {
-			utils.HttpReturnWithCodeOne(c, "举报失败，数据库写入失败，请联系管理员")
+			utils.HttpReturnWithCodeOne(c, "举报失败，请联系管理员")
 			return
 		} else {
 			c.JSON(http.StatusOK, gin.H{

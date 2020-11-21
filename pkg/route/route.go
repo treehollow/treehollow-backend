@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 	"thuhole-go-backend/pkg/db"
 	"thuhole-go-backend/pkg/mail"
 	"thuhole-go-backend/pkg/recaptcha"
@@ -23,7 +24,11 @@ var postLimiter2 *limiter.Limiter
 var commentLimiter *limiter.Limiter
 var commentLimiter2 *limiter.Limiter
 var getOneLimiter *limiter.Limiter
+var getCommentLimiter *limiter.Limiter
 var doAttentionLimiter *limiter.Limiter
+var searchLimiter *limiter.Limiter
+
+var commentMux sync.Mutex
 
 func sendCode(c *gin.Context) {
 	code := utils.GenCode()
@@ -230,7 +235,7 @@ func ServicesApiListenHttp() {
 	}, "postLimiter")
 	postLimiter2 = utils.InitLimiter(limiter.Rate{
 		Period: 24 * time.Hour,
-		Limit:  50,
+		Limit:  100,
 	}, "postLimiter2")
 	commentLimiter = utils.InitLimiter(limiter.Rate{
 		Period: 10 * time.Second,
@@ -238,12 +243,20 @@ func ServicesApiListenHttp() {
 	}, "commentLimiter")
 	commentLimiter2 = utils.InitLimiter(limiter.Rate{
 		Period: 24 * time.Hour,
-		Limit:  200,
+		Limit:  500,
 	}, "commentLimiter2")
 	getOneLimiter = utils.InitLimiter(limiter.Rate{
 		Period: 24 * time.Hour,
 		Limit:  5000,
 	}, "getOneLimiter")
+	getCommentLimiter = utils.InitLimiter(limiter.Rate{
+		Period: 24 * time.Hour,
+		Limit:  8000,
+	}, "getCommentLimiter")
+	searchLimiter = utils.InitLimiter(limiter.Rate{
+		Period: 24 * time.Hour,
+		Limit:  1000,
+	}, "searchLimiter")
 	doAttentionLimiter = utils.InitLimiter(limiter.Rate{
 		Period: 24 * time.Hour,
 		Limit:  2000,

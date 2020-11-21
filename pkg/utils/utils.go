@@ -4,17 +4,24 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base32"
+	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	libredis "github.com/go-redis/redis/v7"
 	"github.com/oschwald/geoip2-golang"
+	"github.com/sigurn/crc8"
 	"github.com/spf13/viper"
 	"github.com/ulule/limiter/v3"
 	sredis "github.com/ulule/limiter/v3/drivers/store/redis"
+	"io/ioutil"
+	"log"
 	"math/big"
 	"net"
 	"net/http"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -84,14 +91,14 @@ func ContainsString(s []string, e string) (int, bool) {
 	return i, false
 }
 
-func GetCommenterName(id int) string {
+func GetCommenterName(id int, names0 []string, names1 []string) string {
 	switch {
 	case id == 0:
 		return consts.DzName
 	case id <= 26:
-		return consts.Names1[id-1]
+		return names1[id-1]
 	case id <= 26*27:
-		return consts.Names0[(id-1)/26-1] + " " + consts.Names1[(id-1)%26]
+		return names0[(id-1)/26-1] + " " + names1[(id-1)%26]
 	default:
 		return consts.ExtraNamePrefix + strconv.Itoa(id-26*27)
 	}
@@ -134,7 +141,7 @@ func HttpReturnWithCodeOne(c *gin.Context, msg string) {
 	})
 }
 
-func SafeSubSlice(slice []interface{}, low int, high int) []interface{} {
+func SafeSubSlice(slice []gin.H, low int, high int) []gin.H {
 	if 0 <= low && low <= high && high <= len(slice) {
 		return slice[low:high]
 	}
@@ -173,4 +180,44 @@ func InitLimiter(rate limiter.Rate, prefix string) *limiter.Limiter {
 		return nil
 	}
 	return limiter.New(store, rate)
+}
+
+func SaveImage(base64img string, imgPath string) ([]byte, string, error) {
+	var suffix string
+	sDec, err2 := base64.StdEncoding.DecodeString(base64img)
+	if err2 != nil {
+		return nil, "", errors.New("图片数据不合法")
+	}
+	fileType := http.DetectContentType(sDec)
+	if fileType != "image/jpeg" && fileType != "image/jpg" && fileType != "image/png" {
+		return nil, "", errors.New("图片数据不合法")
+	}
+
+	if fileType == "image/png" {
+		suffix = ".png"
+	} else {
+		suffix = ".jpeg"
+	}
+
+	hashedPath := filepath.Join(viper.GetString("images_path"), imgPath[:2])
+	_ = os.MkdirAll(hashedPath, os.ModePerm)
+	err3 := ioutil.WriteFile(filepath.Join(hashedPath, imgPath+suffix), sDec, 0644)
+	if err3 != nil {
+		log.Printf("error ioutil.WriteFile while saving image, err=%s\n", err3.Error())
+		return nil, suffix, errors.New("error while saving image")
+	}
+	return sDec, suffix, nil
+}
+
+func CalcExtra(str1 string, str2 string) int {
+	table := crc8.MakeTable(crc8.CRC8)
+	rtn := int(crc8.Checksum([]byte(str2+str1), table) % 4)
+
+	return rtn
+}
+
+func ProcessExtra(data []gin.H, str string, keyStr string) {
+	for _, item := range data {
+		item["timestamp"] = item["timestamp"].(int) - CalcExtra(str, strconv.Itoa(item[keyStr].(int)))
+	}
 }
