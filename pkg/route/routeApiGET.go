@@ -184,28 +184,19 @@ func getList(c *gin.Context) {
 					utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
 					return
 				} else {
-					rtnData := append(pinnedData, data...)
-					utils.ProcessExtra(rtnData, emailHash, "pid")
-					c.JSON(http.StatusOK, gin.H{
-						"code":      0,
-						"data":      rtnData,
-						"config":    configInfo,
-						"timestamp": utils.GetTimeStamp(),
-						"count":     utils.IfThenElse(data != nil, len(rtnData), 0),
-					})
+					data = append(pinnedData, data...)
 				}
 			}
-		} else {
-			utils.ProcessExtra(data, emailHash, "pid")
-			c.JSON(http.StatusOK, gin.H{
-				"code":      0,
-				"data":      utils.IfThenElse(data != nil, data, []string{}),
-				"config":    configInfo,
-				"timestamp": utils.GetTimeStamp(),
-				"count":     utils.IfThenElse(data != nil, len(data), 0),
-			})
-			return
 		}
+		utils.ProcessExtra(data, emailHash, "pid")
+		c.JSON(http.StatusOK, gin.H{
+			"code":      0,
+			"data":      utils.IfThenElse(data != nil, data, []string{}),
+			"config":    configInfo,
+			"timestamp": utils.GetTimeStamp(),
+			"count":     utils.IfThenElse(data != nil, len(data), 0),
+		})
+		return
 	}
 }
 
