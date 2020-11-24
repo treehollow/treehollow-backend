@@ -36,9 +36,9 @@ func refreshConfig() {
 }
 
 func InitConfigFile() {
-	viper.SetConfigType("json")
+	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
-	viper.SetConfigFile("config.json")
+	viper.SetConfigFile("config.yml")
 	err := viper.ReadInConfig() // Find and read the config file
 	utils.FatalErrorHandle(&err, "error while reading config file")
 

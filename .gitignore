@@ -17,7 +17,8 @@
 #######################################################################
 .idea/
 *.key
-config.json
+config.json*
+config.yml
 log.txt
 TODO.md
 *.mmdb

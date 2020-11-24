@@ -14,9 +14,9 @@ cd thuhole-go-backend
 go install ./...
 ```
 
-将`config-sample.json`复制到`config.json`之后修改参数即可运行。
+将`config-sample.yml`(TODO)复制到`config.yml`之后修改参数即可运行。
 
-`config.json`需要与可执行文件放在同一文件夹。参数包括：
+`config.yml`需要与可执行文件放在同一文件夹。参数包括(TODO)：
 - `salt_hashed`: 邮箱hash的加盐前缀的hash，用于校验stdin中的salt。
 - `images_path`: 存储图片的文件夹。这一文件夹需要能被网页访问。
 - `sql_source`: MySQL数据库配置
@@ -38,7 +38,7 @@ go install ./...
 - `mmdb_path`: GeoLite2或GeoIP2的离线数据库位置
 - `allowed_register_countries`: 邮箱注册时的IP所在国家白名单
 
-当后端程序运行时编辑`config.json`可以热加载，不需要重启程序。
+当后端程序运行时编辑`config.yml`可以热加载，不需要重启程序。
 
 执行`go install ./...`时会在`$GOROOT/bin`生成三个文件可执行文件：
 - `fallback-server`: 是一个非常简易的显示维护信息的小程序。可以使用Nginx的`error_page 502`配置为fallback server.
@@ -50,7 +50,7 @@ go install ./...
 除了编译出的3个可执行文件外，部署一个后端需要使用以下服务：
 - MySQL数据库。使用[./init_db.sql](./init_db.sql)初始化。
 - Redis数据库。
-- Nginx。使得`config.json`中`images_path`文件夹里的图片文件在网页上可访问到。
+- Nginx。使得`config.yml`中`images_path`文件夹里的图片文件在网页上可访问到。
 - 邮件服务。
 - Google reCAPTCHA v3, 在https://www.google.com/recaptcha/intro/v3.html 注册。
 - CDN服务，详见下文。
