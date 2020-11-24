@@ -6,6 +6,7 @@ import (
 	"github.com/robfig/cron/v3"
 	"github.com/spf13/viper"
 	"github.com/ulule/limiter/v3"
+	"gopkg.in/ezzarghili/recaptcha-go.v4"
 	"log"
 	"net"
 	"net/http"
@@ -13,7 +14,6 @@ import (
 	"sync"
 	"thuhole-go-backend/pkg/db"
 	"thuhole-go-backend/pkg/mail"
-	"thuhole-go-backend/pkg/recaptcha"
 	"thuhole-go-backend/pkg/utils"
 	"time"
 )
@@ -33,6 +33,7 @@ var commentMux sync.Mutex
 func sendCode(c *gin.Context) {
 	code := utils.GenCode()
 	user := c.Query("user")
+	recaptchaVersion := c.Query("recaptcha_version")
 	recaptchaToken := c.Query("recaptcha_token")
 	if recaptchaToken == "" || recaptchaToken == "undefined" {
 		c.JSON(http.StatusOK, gin.H{
@@ -103,7 +104,13 @@ func sendCode(c *gin.Context) {
 		}
 	}
 
-	captcha, _ := recaptcha.NewReCAPTCHA(viper.GetString("recaptcha_private_key"), recaptcha.V3, 10*time.Second)
+	var captcha recaptcha.ReCAPTCHA
+	if recaptchaVersion == "v2" {
+		captcha, _ = recaptcha.NewReCAPTCHA(viper.GetString("recaptcha_v2_private_key"), recaptcha.V2, 10*time.Second)
+	} else {
+		captcha, _ = recaptcha.NewReCAPTCHA(viper.GetString("recaptcha_private_key"), recaptcha.V3, 10*time.Second)
+	}
+	captcha.ReCAPTCHALink = "https://www.recaptcha.net/recaptcha/api/siteverify"
 	err = captcha.VerifyWithOptions(recaptchaToken, recaptcha.VerifyOption{
 		RemoteIP:  c.ClientIP(),
 		Threshold: float32(viper.GetFloat64("recaptcha_threshold")),
