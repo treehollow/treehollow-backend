@@ -71,7 +71,7 @@ func FatalErrorHandle(err *error, msg string) {
 	}
 }
 
-func ContainsInt(s []int, e int) (int, bool) {
+func ContainsString(s []string, e string) (int, bool) {
 	i := -1
 	for i, a := range s {
 		if a == e {
@@ -81,7 +81,7 @@ func ContainsInt(s []int, e int) (int, bool) {
 	return i, false
 }
 
-func ContainsString(s []string, e string) (int, bool) {
+func ContainsInt(s []int, e int) (int, bool) {
 	i := -1
 	for i, a := range s {
 		if a == e {
@@ -116,18 +116,6 @@ func IfThenElse(condition bool, a interface{}, b interface{}) interface{} {
 	return b
 }
 
-func SplitToString(a []int, sep string) string {
-	if len(a) == 0 {
-		return ""
-	}
-
-	b := make([]string, len(a))
-	for i, v := range a {
-		b[i] = strconv.Itoa(v)
-	}
-	return strings.Join(b, sep)
-}
-
 func CheckEmail(email string) bool {
 	// REF: https://html.spec.whatwg.org/multipage/input.html#valid-e-mail-address
 	var emailRegexp = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
@@ -141,11 +129,9 @@ func HttpReturnWithCodeOne(c *gin.Context, msg string) {
 	})
 }
 
-func SafeSubSlice(slice []gin.H, low int, high int) []gin.H {
-	if 0 <= low && low <= high && high <= len(slice) {
-		return slice[low:high]
-	}
-	return nil
+func HttpReturnWithCodeOneAndAbort(c *gin.Context, msg string) {
+	HttpReturnWithCodeOne(c, msg)
+	c.Abort()
 }
 
 func IsInAllowedSubnet(ip string) bool {
@@ -209,15 +195,39 @@ func SaveImage(base64img string, imgPath string) ([]byte, string, error) {
 	return sDec, suffix, nil
 }
 
-func CalcExtra(str1 string, str2 string) int {
+func CalcExtra(str1 string, str2 string) int64 {
 	table := crc8.MakeTable(crc8.CRC8)
-	rtn := int(crc8.Checksum([]byte(str2+str1), table) % 4)
+	rtn := int64(crc8.Checksum([]byte(str2+str1), table) % 4)
 
 	return rtn
 }
 
-func ProcessExtra(data []gin.H, str string, keyStr string) {
-	for _, item := range data {
-		item["timestamp"] = item["timestamp"].(int) - CalcExtra(str, strconv.Itoa(item[keyStr].(int)))
+type void struct{}
+
+var member void
+
+func Int32SliceToSet(ids []int32) map[int32]void {
+	set := make(map[int32]void)
+	for _, id := range ids {
+		set[id] = member
 	}
+	return set
+}
+
+func Int32IsInSet(id int32, ids map[int32]void) (rtn bool) {
+	_, rtn = ids[id]
+	return
+}
+
+func TimestampToString(timestamp int64) string {
+	return time.Unix(timestamp, 0).
+		In(consts.TimeLoc).Format("01-02 15:04")
+}
+
+func TrimText(text string, maxLength int) string {
+	runeStr := []rune(text)
+	if len(runeStr) > maxLength {
+		return string(runeStr[:maxLength]) + "..."
+	}
+	return text
 }

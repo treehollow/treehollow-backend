@@ -1,0 +1,120 @@
+######################## 必填配置
+######################## 以下配置必须更改后才可运行程序
+
+### 网站名称
+name: T大树洞
+
+### 联系邮箱
+contact_email: thuhole@protonmail.com
+
+### 检查邮箱是否合法的正则表达式。可参见https://html.spec.whatwg.org/multipage/input.html#valid-e-mail-address
+email_check_regex: ^[a-zA-Z]+[-]*[a-zA-Z]*[0-9]*@(mails\.tsinghua\.edu\.cn)$
+
+### 图床域名。注意以"/"结尾
+img_base_url: https://img.thuhole.com/
+
+### 图片文件存储文件夹。这个文件夹中的内容需要可以通过图床域名访问到。注意没有"/"结尾
+images_path: /path/to/images/folder
+
+### 是否是debug模式
+is_debug: true
+
+### 当is_debug=false时，用户邮箱在数据库中会通过一个盐被单向加密。
+### 为了安全，这个盐的明文不会存储到硬盘上，而是每次启动树洞登录服务程序时需要手动输入，这里需要填写盐的sha256哈希以避免输错。
+### 获取sha256的方法：echo "YOUR_SALT" | sha256sum
+salt_hashed: d83f8dd178b6db458f6a2b5782a5758dd4250550e7f73bcd4ac963bebf967939
+
+### 树洞内容服务的监听端口和登录服务的监听端口。这两个端口和程序分开的。
+login_api_listen_address: 127.0.0.1:8080
+services_api_listen_address: 127.0.0.1:8081
+
+### Google reCAPTCHA v3密钥。需要前往reCAPTCHA官网获取。https://developers.google.com/recaptcha/docs/v3
+recaptcha_private_key: YOUR_v3_KEY
+### Google reCAPTCHA v2密钥。reCAPTCHA v3不通过时，
+### 会使用v2的基于图片的人机识别验证。需要前往reCAPTCHA官网获取。https://developers.google.com/recaptcha/docs/display
+recaptcha_v2_private_key: YOUR_v2_KEY
+
+### redis服务配置
+redis_source: redis://localhost:6379/0
+
+### MySQL服务配置
+sql_source: USER:PASSWORD@tcp(localhost:3306)/DB_NAME
+
+### SMTP配置
+smtp_host: smtp.thuhole.com
+smtp_password: YOUR_PASSWORD
+smtp_username: noreply@thuhole.com
+smtp_port: 465
+
+
+
+
+
+######################## 可选配置
+######################## 以下配置不必要更改
+
+### 是否允许未注册用户浏览树洞
+allow_unregistered_access: true
+
+### IP地址库文件，见 https://dev.maxmind.com/geoip/geoip2/geolite2/
+mmdb_path: /usr/local/share/GeoIP/GeoLite2-City.mmdb
+### 允许注册的IP国家列表，需要保证mmdb_path的IP地址库可用
+allowed_register_countries:
+  - 美国
+  - 中国
+
+### 公告
+announcement: This is dev server.
+
+### 永久封禁的用户邮箱哈希值列表。这些哈希值对应的邮箱无法注册。
+bannedemailhashes:
+  - d83f8dd178b6db458f6a2b5782a5758dd4250550e7f73bcd4ac963bebf967939
+  - d83f8dd178b6db458f6a2b5782a5758dd4250550e7f73bcd4ac963bebf967938
+
+### 图床CDN配置。这里使用了Dogecloud CDN(https://www.dogecloud.com/)。
+dcaccesskey: ""
+dcs3bucket: ""
+dcs3endpoint: ""
+dcsecretkey: ""
+
+### 不允许用户举报的树洞号列表
+disallow_report_pids:
+  - 118
+  - 1
+  - 4
+
+### 折叠检测的正则表达式
+fold_regex: ([A-Za-z0-9+/]{100})|(BEGIN PUBLIC KEY)
+### "性相关"折叠检测的正则表达式
+sex_related_regex: (porn(.*)hub|杜蕾斯)
+### 折叠tag列表
+fold_tags:
+  - 性相关
+  - 政治相关
+  - 折叠
+  - NSFW
+  - 刷屏
+  - 真实性可疑
+  - 举报较多
+  - 重复内容
+  - 引战
+  - 未经证实的传闻
+  - 令人不适
+
+### 备用图床域名
+img_base_url_bak: https://img2.thuhole.com/
+
+### 每个IP每天最多发送多少注册邮件
+max_email_per_ip_per_day: 10
+
+### 置顶的树洞号列表
+pin_pids: [ ]
+
+### reCAPTCHA v3人机认证的通过分数阈值
+recaptcha_threshold: 0.5
+
+### 当allow_unregistered_access=false时，允许未登录游客访问的IP白名单
+subnets_whitelist: [ ]
+
+### 最新树洞Web版的版本号。树洞Web版会通过检查此版本号自动更新。
+web_frontend_version: v0.0.0

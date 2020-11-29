@@ -1,259 +1,171 @@
 package route
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
 	"log"
 	"net/http"
-	"net/url"
-	"os"
-	"regexp"
 	"strconv"
-	"strings"
+	"thuhole-go-backend/pkg/config"
 	"thuhole-go-backend/pkg/consts"
 	"thuhole-go-backend/pkg/db"
+	"thuhole-go-backend/pkg/permissions"
+	"thuhole-go-backend/pkg/structs"
 	"thuhole-go-backend/pkg/utils"
 	"unicode/utf8"
 )
 
-func getOne(c *gin.Context) {
-	pid, err := strconv.Atoi(c.Query("pid"))
-	if err != nil {
-		utils.HttpReturnWithCodeOne(c, "获取失败，pid不合法")
-		return
-	}
-
-	token := c.Query("user_token")
-	var emailHash string
-	if !viper.GetBool("allow_unregistered_access") && !utils.IsInAllowedSubnet(c.ClientIP()) {
-		emailHash, err = db.GetInfoByToken(token)
-		if err != nil {
-			c.AbortWithStatus(401)
-			return
-		}
-
-		context, err6 := getOneLimiter.Get(c, emailHash)
-		if err6 != nil {
-			c.AbortWithStatus(500)
-			return
-		}
-		if context.Reached {
-			log.Printf("getone limiter reached")
-			utils.HttpReturnWithCodeOne(c, "你今天刷了太多树洞了，明天再来吧")
-			return
-		}
-	}
-
-	var text, tag, typ, filePath string
-	var timestamp, likenum, replynum int
-	_, text, timestamp, tag, typ, filePath, likenum, replynum, _, err = db.GetOnePost(pid)
-	if err != nil {
-		utils.HttpReturnWithCodeOne(c, "没有这条树洞")
-		return
-	} else {
-		c.JSON(http.StatusOK, gin.H{
-			"code": 0,
-			"data": gin.H{
-				"pid":       pid,
-				"text":      text,
-				"type":      typ,
-				"timestamp": timestamp - utils.CalcExtra(emailHash, strconv.Itoa(pid)),
-				"reply":     replynum,
-				"likenum":   likenum,
-				"url":       utils.GetHashedFilePath(filePath),
-				"tag":       utils.IfThenElse(len(tag) != 0, tag, nil),
-			},
-			"timestamp": utils.GetTimeStamp(),
-		})
-		return
+func commentToJson(comment structs.Comment, user structs.User) gin.H {
+	offset := utils.CalcExtra(user.EmailHash, strconv.Itoa(int(comment.ID)))
+	return gin.H{
+		"cid":         comment.ID,
+		"pid":         comment.PostID,
+		"text":        "[" + comment.Name + "] " + comment.Text,
+		"type":        comment.Type,
+		"timestamp":   comment.CreatedAt.Unix() - offset,
+		"url":         utils.GetHashedFilePath(comment.FilePath),
+		"tag":         utils.IfThenElse(len(comment.Tag) != 0, comment.Tag, nil),
+		"permissions": permissions.GetPermissionsByComment(user, comment),
+		"deleted":     comment.DeletedAt.Valid,
+		"name":        comment.Name,
 	}
 }
 
-func getComment(c *gin.Context) {
+func commentsToJson(comments []structs.Comment, user structs.User) []gin.H {
+	var data []gin.H
+	for _, comment := range comments {
+		data = append(data, commentToJson(comment, user))
+	}
+	return data
+}
+
+func detailPost(c *gin.Context) {
 	pid, err := strconv.Atoi(c.Query("pid"))
 	if err != nil {
 		utils.HttpReturnWithCodeOne(c, "获取失败，pid不合法")
 		return
 	}
-	token := c.Query("user_token")
-	attention := 0
-	var emailHash string
-	if len(token) == 32 {
-		emailHash, err = db.GetInfoByToken(token)
-		if err == nil {
-			attention, _ = db.IsAttention(emailHash, pid)
 
-			context, err6 := getCommentLimiter.Get(c, emailHash)
-			if err6 != nil {
-				c.AbortWithStatus(500)
-				return
-			}
-			if context.Reached {
-				log.Printf("getcomment limiter reached")
-				utils.HttpReturnWithCodeOne(c, "你今天刷了太多树洞了，明天再来吧")
-				return
-			}
-		} else if !viper.GetBool("allow_unregistered_access") && !utils.IsInAllowedSubnet(c.ClientIP()) {
-			c.AbortWithStatus(401)
-			return
-		}
-	} else if !viper.GetBool("allow_unregistered_access") && !utils.IsInAllowedSubnet(c.ClientIP()) {
-		c.AbortWithStatus(401)
+	user := c.MustGet("user").(structs.User)
+	canViewDelete := permissions.CanViewDeletedPost(user)
+
+	var post structs.Post
+	err3 := db.GetDb(canViewDelete).First(&post, int32(pid)).Error
+	if err3 != nil {
+		utils.HttpReturnWithCodeOne(c, "找不到这条树洞")
 		return
 	}
+	var attention int64
+	_ = db.GetDb(false).Model(&structs.Attention{}).Where(&structs.Attention{PostID: post.ID, UserID: user.ID}).Count(&attention).Error
 
-	_, isAdmin := utils.ContainsString(viper.GetStringSlice("admins_tokens"), token)
-	_, _, _, _, _, _, _, _, _, err3 := db.GetOnePost(pid)
-	if err3 != nil && !isAdmin {
-		utils.HttpReturnWithCodeOne(c, "pid不存在")
-		return
-	}
-	data, err2 := db.GetSavedComments(pid)
-	utils.ProcessExtra(data, emailHash, "cid")
+	var comments []structs.Comment
+	err2 := db.GetDb(canViewDelete).Where("post_id = ?", int32(pid)).Order("id asc").Find(&comments).Error
 	if err2 != nil {
 		log.Printf("dbGetSavedComments failed: %s\n", err2)
 		utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
 		return
 	} else {
+		data := commentsToJson(comments, user)
+		post.ReplyNum = int32(len(comments))
 		c.JSON(http.StatusOK, gin.H{
-			"code":      0,
-			"data":      utils.IfThenElse(data != nil, data, []string{}),
-			"attention": attention,
+			"code": 0,
+			"data": utils.IfThenElse(data != nil, data, []string{}),
+			"post": postToJson(post, user, attention == 1),
 		})
 		return
 	}
 }
 
-func getList(c *gin.Context) {
-	p, err := strconv.Atoi(c.Query("p"))
-	if err != nil {
-		utils.HttpReturnWithCodeOne(c, "获取失败，参数p不合法")
-		return
+func postToJson(post structs.Post, user structs.User, attention bool) gin.H {
+	offset := utils.CalcExtra(user.EmailHash, strconv.Itoa(int(post.ID)))
+	return gin.H{
+		"pid":         post.ID,
+		"text":        post.Text,
+		"type":        post.Type,
+		"timestamp":   post.CreatedAt.Unix() - offset,
+		"updated_at":  post.UpdatedAt.Unix() - offset,
+		"reply":       post.ReplyNum,
+		"likenum":     post.LikeNum,
+		"attention":   attention,
+		"permissions": permissions.GetPermissionsByPost(user, post),
+		"deleted":     post.DeletedAt.Valid,
+		"url":         utils.GetHashedFilePath(post.FilePath),
+		"tag":         utils.IfThenElse(len(post.Tag) != 0, post.Tag, nil),
 	}
+}
 
-	if p > consts.MaxPage || p <= 0 {
-		utils.HttpReturnWithCodeOne(c, "获取失败，参数p超出范围")
-		return
+func postsToJson(posts []structs.Post, user structs.User, attentionPids []int32) []gin.H {
+	var data []gin.H
+	pidsSet := utils.Int32SliceToSet(attentionPids)
+	for _, post := range posts {
+		data = append(data, postToJson(post, user, utils.Int32IsInSet(post.ID, pidsSet)))
 	}
+	return data
+}
 
-	token := c.Query("user_token")
-	var emailHash string
-	if !viper.GetBool("allow_unregistered_access") && !utils.IsInAllowedSubnet(c.ClientIP()) {
-		emailHash, err = db.GetInfoByToken(token)
-		if err != nil {
-			utils.HttpReturnWithCodeOne(c, "登录凭据过期，请使用邮箱重新登录。")
-			return
-		}
+func getAttentionPidsInPosts(user structs.User, posts []structs.Post) (attentionPids []int32, err error) {
+	var pids []int32
+	for _, post := range posts {
+		pids = append(pids, post.ID)
 	}
+	err = db.GetDb(false).Model(&structs.Attention{}).Where("user_id = ? and post_id in ?", user.ID, pids).
+		Pluck("post_id", &attentionPids).Error
+	return
+}
 
-	var maxPid int
-	var configInfo gin.H
-	maxPid, err = db.GetMaxPid()
-	if err != nil {
-		log.Printf("dbGetMaxPid failed: %s\n", err)
-		c.JSON(http.StatusOK, gin.H{
-			"code":      0,
-			"data":      []string{},
-			"timestamp": utils.GetTimeStamp(),
-			"count":     0,
-		})
-		return
-	}
-	pidLeft := maxPid - p*consts.PageSize
-	pidRight := maxPid - (p-1)*consts.PageSize
-	data, err2 := db.GetSavedPosts(pidLeft, pidRight)
+func listPost(c *gin.Context) {
+	user := c.MustGet("user").(structs.User)
+	canViewDelete := permissions.CanViewDeletedPost(user)
+	page := c.MustGet("page").(int)
+	posts, err2 := db.ListPosts(page, user)
 	if err2 != nil {
-		log.Printf("dbGetSavedPosts failed while getList: %s\n", err2)
+		log.Printf("ListPosts failed: %s\n", err2)
 		utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
 		return
-	} else {
-		pinnedPids := viper.GetIntSlice("pin_pids")
-		if p == 1 {
-			configInfo = gin.H{
-				"img_base_url":         viper.GetString("img_base_url"),
-				"img_base_url_bak":     viper.GetString("img_base_url_bak"),
-				"fold_tags":            viper.GetStringSlice("fold_tags"),
-				"web_frontend_version": viper.GetString("web_frontend_version"),
-				"announcement":         viper.GetString("announcement"),
-			}
-			if len(pinnedPids) > 0 {
-				pinnedData, err3 := db.GetPostsByPidList(pinnedPids)
-				if err3 != nil {
-					log.Printf("get pinned post failed: %s\n", err2)
-					utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
-					return
-				} else {
-					data = append(pinnedData, data...)
-				}
+	}
+
+	pinnedPids := viper.GetIntSlice("pin_pids")
+
+	var configInfo gin.H
+	if page == 1 {
+		configInfo = config.GetFrontendConfigInfo()
+		if len(pinnedPids) > 0 {
+			var pinnedPosts []structs.Post
+			err3 := db.GetDb(canViewDelete).Where(pinnedPids).Order("id desc").Find(&pinnedPosts).Error
+			if err3 != nil {
+				log.Printf("get pinned post failed: %s\n", err2)
+				utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
+				return
+			} else {
+				posts = append(pinnedPosts, posts...)
 			}
 		}
-		utils.ProcessExtra(data, emailHash, "pid")
-		c.JSON(http.StatusOK, gin.H{
-			"code":      0,
-			"data":      utils.IfThenElse(data != nil, data, []string{}),
-			"config":    configInfo,
-			"timestamp": utils.GetTimeStamp(),
-			"count":     utils.IfThenElse(data != nil, len(data), 0),
-		})
+	}
+
+	attentionPids, err3 := getAttentionPidsInPosts(user, posts)
+	if err3 != nil {
+		log.Printf("dbGetAttentionPids failed while list posts: %s\n", err3)
+		utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
 		return
 	}
-}
+	jsPosts := postsToJson(posts, user, attentionPids)
 
-func httpReturnInfo(c *gin.Context, text string) {
 	c.JSON(http.StatusOK, gin.H{
-		"code": 0,
-		"data": []map[string]interface{}{gin.H{
-			"pid":       0,
-			"text":      text,
-			"type":      "text",
-			"timestamp": utils.GetTimeStamp(),
-			"reply":     0,
-			"likenum":   0,
-			"url":       "",
-			"tag":       nil,
-		}},
-		"timestamp": utils.GetTimeStamp(),
-		"count":     1,
+		"code":   0,
+		"data":   utils.IfThenElse(jsPosts != nil, jsPosts, []string{}),
+		"config": configInfo,
+		//"timestamp": utils.GetTimeStamp(),
+		"count": utils.IfThenElse(jsPosts != nil, len(jsPosts), 0),
 	})
+	return
 }
 
-var HotPosts []gin.H
-var shutdownCountDown int
+var HotPosts []structs.Post
 
 func searchPost(c *gin.Context) {
-	page, err := strconv.Atoi(c.Query("page"))
-	if err != nil || page > consts.SearchMaxPage || page <= 0 {
-		utils.HttpReturnWithCodeOne(c, "获取失败，参数page不合法")
-		return
-	}
-	pageSize, err := strconv.Atoi(c.Query("pagesize"))
-	if err != nil || pageSize > consts.SearchMaxPageSize || pageSize <= 0 {
-		utils.HttpReturnWithCodeOne(c, "获取失败，参数pagesize不合法")
-		return
-	}
-
-	token := c.Query("user_token")
-	var emailHash string
-	if !viper.GetBool("allow_unregistered_access") && !utils.IsInAllowedSubnet(c.ClientIP()) {
-		emailHash, err = db.GetInfoByToken(token)
-		if err != nil {
-			c.AbortWithStatus(401)
-			return
-		}
-
-		context, err6 := searchLimiter.Get(c, emailHash)
-		if err6 != nil {
-			c.AbortWithStatus(500)
-			return
-		}
-		if context.Reached {
-			log.Printf("search limiter reached")
-			utils.HttpReturnWithCodeOne(c, "你今天search了太多树洞了，明天再来吧")
-			return
-		}
-	}
-
+	page := c.MustGet("page").(int)
+	pageSize := c.MustGet("page_size").(int)
+	user := c.MustGet("user").(structs.User)
 	keywords := c.Query("keywords")
 
 	if utf8.RuneCountInString(keywords) > consts.SearchMaxLength {
@@ -261,213 +173,129 @@ func searchPost(c *gin.Context) {
 		return
 	}
 
-	if utf8.RuneCountInString(keywords) <= 1 {
-		utils.HttpReturnWithCodeOne(c, "搜索内容过短")
-		return
-	}
-
-	if keywords == "热榜" {
-		rtn := utils.SafeSubSlice(HotPosts, (page-1)*pageSize, page*pageSize)
-		utils.ProcessExtra(rtn, emailHash, "pid")
-		c.JSON(http.StatusOK, gin.H{
-			"code":      0,
-			"data":      utils.IfThenElse(rtn != nil, rtn, []string{}),
-			"timestamp": utils.GetTimeStamp(),
-			"count":     utils.IfThenElse(rtn != nil, len(rtn), 0),
-		})
-		return
-	}
-
-	// Admin function
-	setTagRe := regexp.MustCompile(`^settag (.*) (pid=|cid=|)(\d+)$`)
-	_, isAdmin := utils.ContainsString(viper.GetStringSlice("admins_tokens"), token)
-	_, isSuperUser := utils.ContainsString(viper.GetStringSlice("super_user_tokens"), token)
-	if isAdmin && setTagRe.MatchString(keywords) {
-		log.Printf("admin search action: token=%s, keywords=%s\n", token, keywords)
-		strs := setTagRe.FindStringSubmatch(keywords)
-		tag := strs[1]
-		typ := strs[2]
-		id, err2 := strconv.Atoi(strs[3])
-		if err2 != nil {
-			httpReturnInfo(c, strs[3]+" not valid")
-			return
-		}
-		if typ == "pid=" || typ == "" {
-			r, err := db.SetPostTagIns.Exec(tag, id)
-			if err != nil {
-				httpReturnInfo(c, "failed")
-				return
-			}
-			rowsAffected, err2 := r.RowsAffected()
-			httpReturnInfo(c, "rows affected = "+strconv.Itoa(int(rowsAffected))+"\nsuccess = "+strconv.FormatBool(err2 == nil))
-			return
-		} else if typ == "cid=" {
-			r, err := db.SetCommentTagIns.Exec(tag, id)
-			if err != nil {
-				httpReturnInfo(c, "failed")
-				return
-			}
-			rowsAffected, err2 := r.RowsAffected()
-			httpReturnInfo(c, "rows affected = "+strconv.Itoa(int(rowsAffected))+"\nsuccess = "+strconv.FormatBool(err2 == nil))
-			return
-		}
-	}
-
-	delCommentRe := regexp.MustCompile(`^del (\d+) (.*)$`)
-	if isAdmin && delCommentRe.MatchString(keywords) {
-		log.Printf("admin search action: token=%s, keywords=%s\n", token, keywords)
-		strs := delCommentRe.FindStringSubmatch(keywords)
-		reason := strs[2]
-		id, err2 := strconv.Atoi(strs[1])
-		if err2 != nil {
-			httpReturnInfo(c, strs[3]+" not valid")
-			return
-		}
-		_, czEmailHash, text, _, _, _, _, _, err := db.GetOneComment(id)
-		if err != nil {
-			log.Printf("GetOneComment failed while delComment: %s\n", err)
-			httpReturnInfo(c, "cid不存在")
-			return
-		}
-		//bannedTimes, err := db.BannedTimesPost(czEmailHash, -1)
-		//if err != nil {
-		//	log.Printf("BannedTimesPost failed while delComment: %s\n", err)
-		//	httpReturnInfo(c, "error while getting banned times")
-		//	return
-		//}
-		_, err = db.PlusCommentReportIns.Exec(666, id)
-		if err != nil {
-			log.Printf("PlusCommentReportIns failed while delComment: %s\n", err)
-			httpReturnInfo(c, "error while updating reportnum")
-			return
-		}
-		msg := "您的树洞评论#" + strconv.Itoa(id) + "\n\"" + text + "\"\n被管理员删除。管理员的删除理由是：【" + reason + "】。"
-		err = db.BanUser(czEmailHash, msg)
-		if err != nil {
-			log.Printf("error dbSaveBanUser while delComment: %s\n", err)
-			httpReturnInfo(c, "error while saving ban info")
-			return
-		}
-		httpReturnInfo(c, "success")
-		return
-	}
-
-	if isAdmin && keywords == "statistics" {
-		httpReturnInfo(c, fmt.Sprintf("24h内注册用户：%d\n总注册用户：%d	", db.GetNewRegisterCountIn24h(), db.GetUserCount()))
-		return
-	}
-
-	if isSuperUser && keywords == "shutdown" {
-		log.Printf("Super user " + token + " shutdown. shutdownCountDown=" + strconv.Itoa(shutdownCountDown))
-		if shutdownCountDown > 0 {
-			httpReturnInfo(c, strconv.Itoa(shutdownCountDown)+" more times to fully shutdown.")
-			shutdownCountDown -= 1
-		} else {
-			os.Exit(0)
-		}
-		return
-	}
-
-	if strings.Contains(keywords, "自杀") && !strings.HasPrefix(keywords, " ") {
-		msg := `需要帮助？
-北京24小时心理援助热线：010-8295-1332
-希望24小时热线：400-161-9995
-
-***
-
-[了解更多](https://www.zhihu.com/answer/106073121) &nbsp; &nbsp; &nbsp; [展示结果](https://thuhole.com/#%20` + url.QueryEscape(keywords) + `)`
-		httpReturnInfo(c, msg)
-		return
-	}
-
-	var data []gin.H
-	if isAdmin && keywords == "deleted" {
-		data, err = db.GetDeletedPosts((page-1)*pageSize, pageSize)
-	} else if isAdmin && keywords == "bans" {
-		data, err = db.GetBans((page-1)*pageSize, pageSize)
-	} else if isAdmin && keywords == "reports" {
-		data, err = db.GetReports((page-1)*10, 10)
-	} else {
-		data, err = db.SearchSavedPosts("+"+strings.ReplaceAll(keywords, " ", " +"), keywords, keywords, (page-1)*pageSize, pageSize)
-	}
-	if err != nil {
-		log.Printf("dbSearchSavedPosts or dbGetDeletedPosts failed while searchList: %s\n", err)
+	posts, err2 := db.SearchPosts(page, pageSize, keywords, nil, user)
+	if err2 != nil {
+		log.Printf("SearchPosts failed: %s\n", err2)
 		utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
 		return
-	} else {
-		utils.ProcessExtra(data, emailHash, "pid")
-		c.JSON(http.StatusOK, gin.H{
-			"code":      0,
-			"data":      utils.IfThenElse(data != nil, data, []string{}),
-			"timestamp": utils.GetTimeStamp(),
-			"count":     utils.IfThenElse(data != nil, len(data), 0),
-		})
+	}
+	attentionPids, err3 := getAttentionPidsInPosts(user, posts)
+	if err3 != nil {
+		log.Printf("dbGetAttentionPids failed while search posts: %s\n", err3)
+		utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
 		return
 	}
+	jsPosts := postsToJson(posts, user, attentionPids)
+
+	c.JSON(http.StatusOK, gin.H{
+		"code": 0,
+		"data": utils.IfThenElse(jsPosts != nil, jsPosts, []string{}),
+		//"timestamp": utils.GetTimeStamp(),
+		"count": utils.IfThenElse(jsPosts != nil, len(jsPosts), 0),
+	})
+	return
 }
 
-func getAttention(c *gin.Context) {
-	token := c.Query("user_token")
-	emailHash, err := db.GetInfoByToken(token)
+func searchAttentionPost(c *gin.Context) {
+	page := c.MustGet("page").(int)
+	pageSize := c.MustGet("page_size").(int)
+	user := c.MustGet("user").(structs.User)
+	canViewDelete := permissions.CanViewDeletedPost(user)
+	keywords := c.Query("keywords")
 
-	if err != nil {
-		utils.HttpReturnWithCodeOne(c, "操作失败，请检查登录状态")
+	if utf8.RuneCountInString(keywords) > consts.SearchMaxLength {
+		utils.HttpReturnWithCodeOne(c, "搜索内容过长")
 		return
 	}
 
-	pids, err3 := db.GetAttentionPids(emailHash)
+	var attentionPids []int32
+	err3 := db.GetDb(canViewDelete).Model(&structs.Attention{}).
+		Where("user_id = ?", user.ID).
+		Pluck("post_id", &attentionPids).Error
+	if err3 != nil {
+		log.Printf("dbGetAttentionPids failed while search posts: %s\n", err3)
+		utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
+		return
+	}
+
+	posts, err2 := db.SearchPosts(page, pageSize, keywords, attentionPids, user)
+	if err2 != nil {
+		log.Printf("SearchPosts failed: %s\n", err2)
+		utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
+		return
+	}
+	jsPosts := postsToJson(posts, user, attentionPids)
+
+	c.JSON(http.StatusOK, gin.H{
+		"code": 0,
+		"data": utils.IfThenElse(jsPosts != nil, jsPosts, []string{}),
+		//"timestamp": utils.GetTimeStamp(),
+		"count": utils.IfThenElse(jsPosts != nil, len(jsPosts), 0),
+	})
+	return
+}
+
+func attentionPosts(c *gin.Context) {
+	page := c.MustGet("page").(int)
+
+	user := c.MustGet("user").(structs.User)
+	canViewDelete := permissions.CanViewDeletedPost(user)
+	offset := (page - 1) * consts.PageSize
+	limit := consts.PageSize
+
+	var attentionPids []int32
+	err3 := db.GetDb(canViewDelete).Model(&structs.Attention{}).
+		Where("user_id = ?", user.ID).Order("post_id desc").Limit(limit).Offset(offset).
+		Pluck("post_id", &attentionPids).Error
 	if err3 != nil {
 		log.Printf("dbGetAttentionPids failed while getAttention: %s\n", err3)
 		utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
 		return
 	}
 
-	if len(pids) == 0 {
-		c.JSON(http.StatusOK, gin.H{
-			"code":      0,
-			"data":      []string{},
-			"timestamp": utils.GetTimeStamp(),
-			"count":     0,
-		})
-		return
-	}
-
-	data, err2 := db.GetPostsByPidList(pids)
+	var posts []structs.Post
+	err2 := db.GetDb(canViewDelete).Where("id in ?", attentionPids).Order("id desc").Find(&posts).Error
 	if err2 != nil {
-		log.Printf("dbGetPostsByPidList failed while getAttention: %s\n", err2)
+		log.Printf("get posts failed while getAttention: %s\n", err2)
 		utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
 		return
 	} else {
+		data := postsToJson(posts, user, attentionPids)
 		c.JSON(http.StatusOK, gin.H{
-			"code":      0,
-			"data":      utils.IfThenElse(data != nil, data, []string{}),
-			"timestamp": utils.GetTimeStamp(),
-			"count":     utils.IfThenElse(data != nil, len(data), 0),
+			"code": 0,
+			"data": utils.IfThenElse(data != nil, data, []string{}),
+			//"timestamp": utils.GetTimeStamp(),
+			"count": utils.IfThenElse(data != nil, len(data), 0),
 		})
 		return
 	}
 }
 
-func apiGet(c *gin.Context) {
-	action := c.Query("action")
+func systemMsg(c *gin.Context) {
+	var msgs []structs.SystemMessage
+	user := c.MustGet("user").(structs.User)
+	err2 := db.GetDb(false).Where("user_id = ?", user.ID).Order("created_at desc").Find(&msgs).Error
+	var data []gin.H
+	for _, msg := range msgs {
+		data = append(data, gin.H{
+			"content":   msg.Text,
+			"timestamp": msg.CreatedAt.Unix(),
+			"title":     msg.Title,
+		})
+	}
 
-	switch action {
-	case "getone":
-		getOne(c)
+	if err2 != nil {
+		log.Printf("get systemMsg failed: %s\n", err2)
+		utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
 		return
-	case "getcomment":
-		getComment(c)
-		return
-	case "getlist":
-		getList(c)
-		return
-	case "getattention":
-		getAttention(c)
-		return
-	case "search":
-		searchPost(c)
-		return
-	default:
-		c.AbortWithStatus(403)
+	} else {
+		c.JSON(http.StatusOK, gin.H{
+			"error": nil,
+			"result": utils.IfThenElse(data != nil, data, []gin.H{{
+				"content":   "目前尚无系统消息",
+				"timestamp": 0,
+				"title":     "提示",
+			}}),
+		})
 	}
 }

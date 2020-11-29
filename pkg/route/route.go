@@ -5,292 +5,79 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/robfig/cron/v3"
 	"github.com/spf13/viper"
-	"github.com/ulule/limiter/v3"
-	"gopkg.in/ezzarghili/recaptcha-go.v4"
-	"log"
-	"net"
-	"net/http"
-	"strings"
-	"sync"
-	"thuhole-go-backend/pkg/db"
-	"thuhole-go-backend/pkg/mail"
-	"thuhole-go-backend/pkg/utils"
-	"time"
+	"thuhole-go-backend/pkg/consts"
 )
-
-var emailLimiter *limiter.Limiter
-var postLimiter *limiter.Limiter
-var postLimiter2 *limiter.Limiter
-var commentLimiter *limiter.Limiter
-var commentLimiter2 *limiter.Limiter
-var getOneLimiter *limiter.Limiter
-var getCommentLimiter *limiter.Limiter
-var doAttentionLimiter *limiter.Limiter
-var searchLimiter *limiter.Limiter
-
-var commentMux sync.Mutex
-
-func sendCode(c *gin.Context) {
-	code := utils.GenCode()
-	user := c.Query("user")
-	recaptchaVersion := c.Query("recaptcha_version")
-	recaptchaToken := c.Query("recaptcha_token")
-	if recaptchaToken == "" || recaptchaToken == "undefined" {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"msg":     "recaptcha校验失败，请稍等片刻或刷新重试。如果注册持续失败，可邮件联系thuhole@protonmail.com人工注册。",
-		})
-		return
-	}
-
-	if !(strings.HasSuffix(user, "@mails.tsinghua.edu.cn")) || !utils.CheckEmail(user) {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"msg":     "很抱歉，您的邮箱无法注册T大树洞。目前只有@mails.tsinghua.edu.cn的邮箱开放注册。",
-		})
-		return
-	}
-
-	hashedUser := utils.HashEmail(user)
-	if _, b := utils.ContainsString(viper.GetStringSlice("bannedEmailHashes"), hashedUser); b {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"msg":     "您的账户已被冻结。如果需要解冻，请联系thuhole@protonmail.com。",
-		})
-		return
-	}
-	now := utils.GetTimeStamp()
-	_, timeStamp, _, err := db.GetCode(hashedUser)
-	//if err != nil {
-	//	log.Printf("dbGetCode failed when sendCode: %s\n", err)
-	//}
-	if now-timeStamp < 300 {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"msg":     "请不要短时间内重复发送邮件。",
-		})
-		return
-	}
-
-	context, err2 := emailLimiter.Get(c, c.ClientIP())
-	if err2 != nil {
-		log.Printf("send mail to %s failed, limiter fatal error. IP=%s,err=%s\n", user, c.ClientIP(), err2)
-		c.AbortWithStatus(500)
-		return
-	}
-
-	if context.Reached {
-		log.Printf("send mail to %s failed, too many requests. IP=%s,err=%s\n", user, c.ClientIP(), err)
-		c.JSON(http.StatusTooManyRequests, gin.H{
-			"success": false,
-			"msg":     "您今天已经发送了过多验证码，请24小时之后重试。",
-		})
-		return
-	}
-
-	if utils.GeoDb != nil && len(viper.GetStringSlice("allowed_register_countries")) != 0 {
-		ip := net.ParseIP(c.ClientIP())
-		record, err5 := utils.GeoDb.Country(ip)
-		if err5 == nil {
-			country := record.Country.Names["zh-CN"]
-			if _, ok := utils.ContainsString(viper.GetStringSlice("allowed_register_countries"), country); !ok {
-				log.Println("register not allowed:", c.ClientIP(), country, user)
-				c.JSON(http.StatusOK, gin.H{
-					"success": false,
-					"msg":     "您所在的国家暂未开放注册。",
-				})
-				return
-			}
-		}
-	}
-
-	var captcha recaptcha.ReCAPTCHA
-	if recaptchaVersion == "v2" {
-		captcha, _ = recaptcha.NewReCAPTCHA(viper.GetString("recaptcha_v2_private_key"), recaptcha.V2, 10*time.Second)
-	} else {
-		captcha, _ = recaptcha.NewReCAPTCHA(viper.GetString("recaptcha_private_key"), recaptcha.V3, 10*time.Second)
-	}
-	captcha.ReCAPTCHALink = "https://www.recaptcha.net/recaptcha/api/siteverify"
-	err = captcha.VerifyWithOptions(recaptchaToken, recaptcha.VerifyOption{
-		RemoteIP:  c.ClientIP(),
-		Threshold: float32(viper.GetFloat64("recaptcha_threshold")),
-	})
-	if err != nil {
-		log.Println("recaptcha server error", err, c.ClientIP(), user)
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"msg":     "recaptcha风控系统校验失败，请检查网络环境并刷新重试。如果注册持续失败，可邮件联系thuhole@protonmail.com人工注册。",
-		})
-		return
-	}
-
-	err = mail.SendMail(code, user)
-	if err != nil {
-		log.Printf("send mail to %s failed: %s\n", user, err)
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"msg":     "验证码邮件发送失败。",
-		})
-		return
-	}
-
-	err = db.SaveCode(hashedUser, code)
-	if err != nil {
-		log.Printf("save code failed: %s\n", err)
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"msg":     "数据库写入失败，请联系管理员",
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"msg":     "验证码发送成功。如果要在多客户端登录请不要使用邮件登录而是Token登录。5分钟内无法重复发送验证码，请记得查看垃圾邮件。",
-	})
-}
-
-func login(c *gin.Context) {
-	user := c.Query("user")
-	code := c.Query("valid_code")
-	hashedUser := utils.HashEmail(user)
-	if _, b := utils.ContainsString(viper.GetStringSlice("bannedEmailHashes"), hashedUser); b {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"msg":     "您的账户已被冻结。如果需要解冻，请联系thuhole@protonmail.com。",
-		})
-		return
-	}
-	now := utils.GetTimeStamp()
-
-	if !(strings.HasSuffix(user, "@mails.tsinghua.edu.cn")) || !utils.CheckEmail(user) {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"msg":     "邮箱格式不正确",
-		})
-		return
-	}
-
-	correctCode, timeStamp, failedTimes, err := db.GetCode(hashedUser)
-	if err != nil {
-		log.Printf("check code failed: %s\n", err)
-	}
-	if failedTimes >= 10 && now-timeStamp <= 43200 {
-		c.JSON(http.StatusOK, gin.H{
-			"code": 1,
-			"msg":  "验证码错误尝试次数过多，请重新发送验证码",
-		})
-		return
-	}
-	if correctCode != code || now-timeStamp > 43200 {
-		log.Printf("验证码无效或过期: %s, %s\n", user, code)
-		c.JSON(http.StatusOK, gin.H{
-			"code": 1,
-			"msg":  "验证码无效或过期",
-		})
-		_, _ = db.PlusOneFailedCodeIns.Exec(hashedUser)
-		return
-	}
-	token := utils.GenToken()
-	err = db.SaveToken(token, hashedUser)
-	if err != nil {
-		log.Printf("failed dbSaveToken while login, %s\n", err)
-		c.JSON(http.StatusOK, gin.H{
-			"code": 1,
-			"msg":  "数据库写入失败，请联系管理员",
-		})
-		return
-	} else {
-		c.JSON(http.StatusOK, gin.H{
-			"code":       0,
-			"msg":        "登录成功！",
-			"user_token": token,
-		})
-		return
-	}
-}
-
-func systemMsg(c *gin.Context) {
-	c.Header("Content-Type", "application/json; charset=utf-8")
-	token := c.Query("user_token")
-	emailHash, err := db.GetInfoByToken(token)
-	if err == nil {
-		data, err2 := db.GetBannedMsgs(emailHash)
-		if err2 != nil {
-			log.Printf("dbGetBannedMsgs failed while systemMsg: %s\n", err2)
-			utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
-			return
-		} else {
-			c.JSON(http.StatusOK, gin.H{
-				"error":  nil,
-				"result": data,
-			})
-		}
-	} else {
-		//log.Printf("check token failed: %s\n", err)
-		c.String(http.StatusOK, `{"error":null,"result":[]}`)
-	}
-}
 
 func ServicesApiListenHttp() {
 	r := gin.Default()
 	r.Use(cors.Default())
 
-	postLimiter = utils.InitLimiter(limiter.Rate{
-		Period: 20 * time.Second,
-		Limit:  1,
-	}, "postLimiter")
-	postLimiter2 = utils.InitLimiter(limiter.Rate{
-		Period: 24 * time.Hour,
-		Limit:  100,
-	}, "postLimiter2")
-	commentLimiter = utils.InitLimiter(limiter.Rate{
-		Period: 10 * time.Second,
-		Limit:  1,
-	}, "commentLimiter")
-	commentLimiter2 = utils.InitLimiter(limiter.Rate{
-		Period: 24 * time.Hour,
-		Limit:  500,
-	}, "commentLimiter2")
-	getOneLimiter = utils.InitLimiter(limiter.Rate{
-		Period: 24 * time.Hour,
-		Limit:  5000,
-	}, "getOneLimiter")
-	getCommentLimiter = utils.InitLimiter(limiter.Rate{
-		Period: 24 * time.Hour,
-		Limit:  8000,
-	}, "getCommentLimiter")
-	searchLimiter = utils.InitLimiter(limiter.Rate{
-		Period: 24 * time.Hour,
-		Limit:  1000,
-	}, "searchLimiter")
-	doAttentionLimiter = utils.InitLimiter(limiter.Rate{
-		Period: 24 * time.Hour,
-		Limit:  2000,
-	}, "doAttentionLimiter")
-
+	initLimiters()
 	shutdownCountDown = 2
 	c := cron.New()
 	_, _ = c.AddFunc("0 0 * * *", func() {
 		shutdownCountDown = 2
 	})
 
-	r.GET("/api_xmcp/hole/system_msg", systemMsg)
-	r.GET("/services/thuhole/api.php", apiGet)
-	r.POST("/services/thuhole/api.php", apiPost)
+	r.Use(authMiddleware())
+	r.GET("/contents/system_msg",
+		disallowUnregisteredUsers(),
+		systemMsg)
+	r.GET("/contents/post/list",
+		checkParameterPage(consts.MaxPage),
+		listPost)
+	r.GET("/contents/post/detail",
+		limiterMiddleware(detailPostLimiter, "你今天刷了太多树洞了，明天再来吧", true),
+		detailPost)
+	r.GET("/contents/search",
+		limiterMiddleware(searchLimiter, "你今天搜索太多树洞了，明天再来吧", true),
+		checkParameterPage(consts.SearchMaxPage),
+		checkParameterPageSize(),
+		searchHotPosts(),
+		adminHelpCommand(),
+		adminReportsCommand(),
+		adminStatisticsCommand(),
+		adminSysMsgsCommand(),
+		adminShutdownCommand(),
+		searchPost)
+	r.GET("/contents/post/attentions",
+		disallowUnregisteredUsers(),
+		checkParameterPage(consts.MaxPage),
+		attentionPosts)
+	r.GET("/contents/search/attentions",
+		disallowUnregisteredUsers(),
+		checkParameterPage(consts.SearchMaxPage),
+		limiterMiddleware(searchLimiter, "你今天搜索太多树洞了，明天再来吧", true),
+		checkParameterPageSize(),
+		searchAttentionPost)
+	r.POST("/send/post",
+		disallowUnregisteredUsers(),
+		limiterMiddleware(postLimiter, "请不要短时间内连续发送树洞", false),
+		limiterMiddleware(postLimiter2, "你24小时内已经发送太多树洞了", true),
+		disallowBannedPostUsers(),
+		checkParameterTextAndImage(),
+		sendPost)
+	r.POST("/send/comment",
+		disallowUnregisteredUsers(),
+		limiterMiddleware(commentLimiter, "请不要短时间内连续发送树洞回复", false),
+		limiterMiddleware(commentLimiter2, "你24小时内已经发送太多树洞回复了", true),
+		disallowBannedPostUsers(),
+		checkParameterTextAndImage(),
+		sendComment)
+	r.POST("/edit/attention",
+		disallowUnregisteredUsers(),
+		limiterMiddleware(doAttentionLimiter, "你今天关注太多树洞了，明天再来吧", true),
+		editAttention)
+	r.POST("/edit/report/post",
+		disallowUnregisteredUsers(),
+		checkReportParams(true),
+		preprocessReportPost,
+		handleReport)
+	r.POST("/edit/report/comment",
+		disallowUnregisteredUsers(),
+		checkReportParams(false),
+		preprocessReportComment,
+		handleReport)
+	//TODO: compatibility with older version
 	_ = r.Run(viper.GetString("services_api_listen_address"))
-}
-
-func LoginApiListenHttp() {
-	r := gin.Default()
-	r.Use(cors.Default())
-
-	emailLimiter = utils.InitLimiter(limiter.Rate{
-		Period: 24 * time.Hour,
-		Limit:  viper.GetInt64("max_email_per_ip_per_day"),
-	}, "emailLimiter")
-
-	r.POST("/api_xmcp/login/send_code", sendCode)
-	r.POST("/api_xmcp/login/login", login)
-	_ = r.Run(viper.GetString("login_api_listen_address"))
 }

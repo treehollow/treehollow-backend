@@ -24,6 +24,8 @@ func serviceFallBack(c *gin.Context) {
 func main() {
 	r := gin.Default()
 	r.Use(cors.Default())
+
+	//TODO: read config
 	r.POST("/api_xmcp/login/send_code", apiFallBack)
 	r.POST("/api_xmcp/login/login", apiFallBack)
 	r.GET("/api_xmcp/hole/system_msg", serviceFallBack)

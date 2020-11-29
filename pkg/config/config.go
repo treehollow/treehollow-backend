@@ -2,6 +2,7 @@ package config
 
 import (
 	"github.com/fsnotify/fsnotify"
+	"github.com/gin-gonic/gin"
 	"github.com/oschwald/geoip2-golang"
 	"github.com/spf13/viper"
 	"log"
@@ -48,4 +49,15 @@ func InitConfigFile() {
 		refreshConfig()
 	})
 	refreshConfig()
+}
+
+func GetFrontendConfigInfo() gin.H {
+	// TODO: swap img_base_url if not in China
+	return gin.H{
+		"img_base_url":         viper.GetString("img_base_url"),
+		"img_base_url_bak":     viper.GetString("img_base_url_bak"),
+		"fold_tags":            viper.GetStringSlice("fold_tags"),
+		"web_frontend_version": viper.GetString("web_frontend_version"),
+		"announcement":         viper.GetString("announcement"),
+	}
 }

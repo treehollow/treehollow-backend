@@ -9,11 +9,13 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"thuhole-go-backend/pkg/consts"
 	"thuhole-go-backend/pkg/db"
+	"thuhole-go-backend/pkg/permissions"
 	"thuhole-go-backend/pkg/s3"
+	"thuhole-go-backend/pkg/structs"
 	"thuhole-go-backend/pkg/utils"
-	"unicode/utf8"
 )
 
 func generateTag(text string) string {
@@ -32,63 +34,15 @@ func generateTag(text string) string {
 	return ""
 }
 
-func doPost(c *gin.Context) {
+func sendPost(c *gin.Context) {
 	text := c.PostForm("text")
 	typ := c.PostForm("type")
-	token := c.PostForm("user_token")
 	img := c.PostForm("data")
-	if utf8.RuneCountInString(text) > consts.PostMaxLength {
-		utils.HttpReturnWithCodeOne(c, "字数过长！字数限制为"+strconv.Itoa(consts.PostMaxLength)+"字。")
-		return
-	} else if len(text) == 0 && typ == "text" {
-		utils.HttpReturnWithCodeOne(c, "请输入内容")
-		return
-	} else if typ != "text" && typ != "image" {
-		utils.HttpReturnWithCodeOne(c, "未知类型的树洞")
-		return
-	} else if int(float64(len(img))/consts.Base64Rate) > consts.ImgMaxLength {
-		utils.HttpReturnWithCodeOne(c, "图片大小超出限制！")
-		return
-	}
-
-	emailHash, err3 := db.GetInfoByToken(token)
-	if err3 != nil {
-		utils.HttpReturnWithCodeOne(c, "发送失败，请检查登录状态")
-		return
-	}
-
-	context, err5 := postLimiter.Get(c, emailHash)
-	if err5 != nil {
-		c.AbortWithStatus(500)
-		return
-	}
-	if context.Reached {
-		//log.Printf("post limiter reached")
-		utils.HttpReturnWithCodeOne(c, "请不要短时间内连续发送树洞")
-		return
-	}
-
-	context, err5 = postLimiter2.Get(c, emailHash)
-	if err5 != nil {
-		c.AbortWithStatus(500)
-		return
-	}
-	if context.Reached {
-		log.Printf("post limiter 2 reached")
-		utils.HttpReturnWithCodeOne(c, "你24小时内已经发送太多树洞了")
-		return
-	}
-
-	timestamp := int(utils.GetTimeStamp())
-	bannedTimes, _ := db.BannedTimesPost(emailHash, timestamp)
-	if bannedTimes > 0 {
-		utils.HttpReturnWithCodeOne(c, "很抱歉，您当前处于禁言状态，无法发送树洞。")
-		return
-	}
+	user := c.MustGet("user").(structs.User)
 
 	tag := generateTag(text)
 
-	var pid int
+	var pid int32
 	var err error
 	var imgPath string
 	var uploadChan chan bool
@@ -101,7 +55,7 @@ func doPost(c *gin.Context) {
 			return
 		}
 
-		pid, err = db.SavePost(emailHash, text, timestamp, tag, typ, imgPath+suffix)
+		pid, err = db.SavePost(user.ID, text, tag, typ, imgPath+suffix)
 		if err == nil && len(viper.GetString("DCSecretKey")) > 0 {
 			uploadChan = make(chan bool, 1)
 			go func() {
@@ -113,7 +67,7 @@ func doPost(c *gin.Context) {
 			}()
 		}
 	} else {
-		pid, err = db.SavePost(emailHash, text, timestamp, tag, typ, "")
+		pid, err = db.SavePost(user.ID, text, tag, typ, "")
 	}
 
 	if err != nil {
@@ -126,8 +80,6 @@ func doPost(c *gin.Context) {
 			<-uploadChan
 		}
 
-		_, _ = db.AddAttentionIns.Exec(emailHash, pid)
-		_, _ = db.PlusOneAttentionIns.Exec(pid)
 		c.JSON(http.StatusOK, gin.H{
 			"code": 0,
 			"data": pid,
@@ -136,76 +88,33 @@ func doPost(c *gin.Context) {
 	}
 }
 
-func doComment(c *gin.Context) {
+var commentMux sync.Mutex
+
+func sendComment(c *gin.Context) {
 	text := c.PostForm("text")
 	typ := c.PostForm("type")
-	token := c.PostForm("user_token")
 	img := c.PostForm("data")
-	if typ != "image" {
-		typ = "text"
-	}
-	if utf8.RuneCountInString(text) > consts.CommentMaxLength {
-		utils.HttpReturnWithCodeOne(c, "字数过长！字数限制为"+strconv.Itoa(consts.CommentMaxLength)+"字。")
-		return
-	} else if len(text) == 0 && typ == "text" {
-		utils.HttpReturnWithCodeOne(c, "请输入内容")
-		return
-	} else if int(float64(len(img))/consts.Base64Rate) > consts.ImgMaxLength {
-		utils.HttpReturnWithCodeOne(c, "图片大小超出限制！")
-		return
-	}
 	pid, err := strconv.Atoi(c.PostForm("pid"))
 	if err != nil {
 		utils.HttpReturnWithCodeOne(c, "发送失败，pid不合法")
 		return
 	}
-	emailHash, err5 := db.GetInfoByToken(token)
-	if err5 != nil {
-		utils.HttpReturnWithCodeOne(c, "发送失败，请检查登录状态")
-		return
-	}
 
-	context, err6 := commentLimiter.Get(c, emailHash)
-	if err6 != nil {
-		c.AbortWithStatus(500)
-		return
-	}
-	if context.Reached {
-		//log.Printf("comment limiter reached")
-		utils.HttpReturnWithCodeOne(c, "请不要短时间内连续发送树洞回复")
-		return
-	}
+	user := c.MustGet("user").(structs.User)
+	canViewDelete := permissions.CanViewDeletedPost(user)
 
-	context, err6 = commentLimiter2.Get(c, emailHash)
-	if err6 != nil {
-		c.AbortWithStatus(500)
-		return
-	}
-	if context.Reached {
-		log.Printf("commment limiter 2 reached")
-		utils.HttpReturnWithCodeOne(c, "你24小时内已经发送太多树洞回复了")
-		return
-	}
-
-	timestamp := int(utils.GetTimeStamp())
-	bannedTimes, _ := db.BannedTimesPost(emailHash, timestamp)
-	if bannedTimes > 0 {
-		utils.HttpReturnWithCodeOne(c, "很抱歉，您当前处于禁言状态，无法发送评论。")
-		return
-	}
-	dzEmailHash, _, _, _, _, _, _, _, _, err := db.GetOnePost(pid)
+	var post structs.Post
+	err = db.GetDb(canViewDelete).First(&post, int32(pid)).Error
 	if err != nil {
 		utils.HttpReturnWithCodeOne(c, "发送失败，pid不存在")
 		return
 	}
 
 	var name string
-	var names0, names1 []string
-
-	names0, names1 = consts.Names0, consts.Names1
+	names0, names1 := consts.Names0, consts.Names1
 	commentMux.Lock()
 
-	name, err = db.GenCommenterName(dzEmailHash, emailHash, pid, names0, names1)
+	name, err = db.GenCommenterName(post.UserID, user.ID, post.ID, names0, names1)
 	if err != nil {
 		log.Printf("error GenCommenterName in doComment(), err=%s\n", err.Error())
 		utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
@@ -225,7 +134,7 @@ func doComment(c *gin.Context) {
 			return
 		}
 
-		_, err = db.SaveComment(emailHash, text, "", timestamp, typ, imgPath+suffix, pid, name)
+		_, err = db.SaveComment(user.ID, text, "", typ, imgPath+suffix, int32(pid), name)
 		if err == nil && len(viper.GetString("DCSecretKey")) > 0 {
 			uploadChan = make(chan bool, 1)
 			go func() {
@@ -237,7 +146,7 @@ func doComment(c *gin.Context) {
 			}()
 		}
 	} else {
-		_, err = db.SaveComment(emailHash, text, "", timestamp, "text", "", pid, name)
+		_, err = db.SaveComment(user.ID, text, "", "text", "", int32(pid), name)
 	}
 	commentMux.Unlock()
 
@@ -246,22 +155,11 @@ func doComment(c *gin.Context) {
 		return
 	} else {
 
-		_, err = db.PlusOneCommentIns.Exec(pid)
-		if err != nil {
-			log.Printf("error plusOneCommentIns while commenting: %s\n", err)
-		}
-		isAttention, err := db.IsAttention(emailHash, pid)
-		if err == nil && isAttention == 0 {
-			_, _ = db.AddAttentionIns.Exec(emailHash, pid)
-			_, _ = db.PlusOneAttentionIns.Exec(pid)
-		}
-
-		// set tag
-		if dzEmailHash == emailHash {
+		if user.ID == post.UserID {
 			re := regexp.MustCompile(`[#＃](性相关|政治相关|引战|未经证实的传闻|令人不适|NSFW|nsfw|折叠|重复内容)`)
 			if re.MatchString(text) {
 				tag := strings.ToUpper(re.FindStringSubmatch(text)[1])
-				_, _ = db.SetPostTagIns.Exec(tag, pid)
+				_ = db.GetDb(canViewDelete).Model(&structs.Post{}).Where("id = ?", post.ID).Update("tag", tag)
 			}
 		}
 
@@ -277,112 +175,116 @@ func doComment(c *gin.Context) {
 	}
 }
 
-func doReport(c *gin.Context) {
-	reason := c.PostForm("reason")
-	if len(reason) > consts.ReportMaxLength {
-		utils.HttpReturnWithCodeOne(c, "字数过长！字数限制为"+strconv.Itoa(consts.ReportMaxLength)+"字节。")
-		return
-	} else if len(reason) == 0 {
-		utils.HttpReturnWithCodeOne(c, "请输入内容")
-		return
-	}
-	pid, err := strconv.Atoi(c.PostForm("pid"))
-	if err != nil {
-		utils.HttpReturnWithCodeOne(c, "举报失败，pid不合法")
-		return
-	} else if _, ok := utils.ContainsInt(viper.GetIntSlice("disallow_report_pids"), pid); ok {
-		utils.HttpReturnWithCodeOne(c, "举报失败，哈哈")
-		return
-	}
-	token := c.PostForm("user_token")
-	dzEmailHash, text, _, _, typ, _, _, _, reportnum, err2 := db.GetOnePost(pid)
-	if err2 != nil {
-		utils.HttpReturnWithCodeOne(c, "举报失败，pid不存在")
-		return
-	}
-	emailHash, err5 := db.GetInfoByToken(token)
-	if err5 != nil {
-		utils.HttpReturnWithCodeOne(c, "举报失败，请检查登录状态")
-		return
-	}
-	_, err = db.SaveReport(emailHash, reason, pid)
-	if err != nil {
-		utils.HttpReturnWithCodeOne(c, "举报失败")
-		return
-	} else {
-		if reportnum == 9 {
-			_, err = db.PlusReportIns.Exec(1, pid)
-			if err != nil {
-				log.Printf("error plusOneReportIns while reporting: %s\n", err)
-			}
-
-			msg := "您的" + typ + "树洞" + strconv.Itoa(pid) + "\n\"" + text + "\"\n由于用户举报过多被删除。"
-
-			err = db.BanUser(dzEmailHash, msg)
-			if err != nil {
-				log.Printf("error dbSaveBanUser while reporting: %s\n", err)
-			}
-		} else if _, isAdmin := utils.ContainsString(viper.GetStringSlice("admins_tokens"), token); isAdmin {
-			_, err = db.PlusReportIns.Exec(666, pid)
-			if err != nil {
-				log.Printf("error plus666ReportIns while reporting: %s\n", err)
-			}
-
-			msg := "您的" + typ + "树洞" + strconv.Itoa(pid) + "\n\"" + text + "\"\n被管理员删除。管理员的删除理由是：【" + reason + "】。"
-
-			err = db.BanUser(dzEmailHash, msg)
-			if err != nil {
-				log.Printf("error dbSaveBanUser while reporting: %s\n", err)
-			}
-		} else {
-			_, err = db.PlusReportIns.Exec(1, pid)
-			if err != nil {
-				log.Printf("error plusOneReportIns while reporting: %s\n", err)
-			}
-		}
-
-		if err != nil {
-			utils.HttpReturnWithCodeOne(c, "举报失败，请联系管理员")
-			return
-		} else {
-			c.JSON(http.StatusOK, gin.H{
-				"code": 0,
-			})
-		}
+func getReportType(typ string) structs.ReportType {
+	switch typ {
+	case "report":
+		return structs.UserReport
+	case "fold":
+		return structs.UserReportFold
+	case "set_tag":
+		return structs.AdminTag
+	case "delete":
+		return structs.UserDelete
+	case "undelete_unban":
+		return structs.AdminUndelete
+	case "delete_ban":
+		return structs.AdminDeleteAndBan
+	case "unban":
+		return structs.AdminUnban
+	default:
+		return structs.UserReport
 	}
 }
 
-func doAttention(c *gin.Context) {
+func getPostOrCommentText(c *gin.Context, isComment bool) string {
+	if isComment {
+		return c.MustGet("comment").(structs.Comment).Text
+	}
+	return c.MustGet("post").(structs.Post).Text
+}
+
+func handleReport(c *gin.Context) {
+	report := c.MustGet("report").(structs.Report)
+	err := db.GetDb(false).Create(&report).Error
+	if err == nil {
+		switch report.Type {
+		case structs.UserReport:
+			var reportScore int64
+			err = db.GetDb(false).Model(&structs.Report{}).Select("SUM(weight)").Where(&structs.Report{
+				PostID:    report.PostID,
+				CommentID: report.CommentID,
+				IsComment: report.IsComment,
+				Type:      structs.UserReport,
+			}).First(&reportScore).Error
+			if reportScore >= 100 && err == nil {
+				err = db.DeleteAndBan(report, utils.TrimText(getPostOrCommentText(c, report.IsComment), 20))
+			}
+		case structs.UserReportFold:
+			var reportScore int64
+			err = db.GetDb(false).Model(&structs.Report{}).Where(&structs.Report{
+				PostID:    report.PostID,
+				CommentID: report.CommentID,
+				IsComment: report.IsComment,
+				Reason:    report.Reason,
+				Type:      structs.UserReportFold,
+			}).Count(&reportScore).Error
+			if reportScore == 3 && err == nil {
+				err = db.SetTagByReport(report)
+			}
+		case structs.UserDelete:
+			err = db.DeleteByReport(report)
+		case structs.AdminTag:
+			err = db.SetTagByReport(report)
+		case structs.AdminDeleteAndBan:
+			err = db.DeleteAndBan(report, utils.TrimText(getPostOrCommentText(c, report.IsComment), 20))
+		case structs.AdminUndelete:
+			_ = db.UnbanByReport(report)
+			if report.IsComment {
+				err = db.GetDb(false).Model(&structs.Comment{}).
+					Where("id = ?", report.CommentID).Update("deleted_at", nil).Error
+			} else {
+				err = db.GetDb(false).Model(&structs.Post{}).
+					Where("id = ?", report.PostID).Update("deleted_at", nil).Error
+			}
+		case structs.AdminUnban:
+			err = db.UnbanByReport(report)
+			if err != nil {
+				utils.HttpReturnWithCodeOne(c, "没有找到相关的封禁，可能已经被解封了")
+				return
+			}
+		}
+	}
+
+	if err != nil {
+		utils.HttpReturnWithCodeOne(c, "数据库写入失败，请联系管理员")
+	} else {
+		c.JSON(http.StatusOK, gin.H{
+			"code": 0,
+		})
+	}
+	return
+
+}
+
+func editAttention(c *gin.Context) {
+	user := c.MustGet("user").(structs.User)
+	canViewDelete := permissions.CanViewDeletedPost(user)
+
 	pid, err := strconv.Atoi(c.PostForm("pid"))
 	if err != nil {
 		utils.HttpReturnWithCodeOne(c, "关注操作失败，pid不合法")
 		return
 	}
-	_, _, _, _, _, _, _, _, _, err3 := db.GetOnePost(pid)
+	var post structs.Post
+	err3 := db.GetDb(canViewDelete).First(&post, int32(pid)).Error
 	if err3 != nil {
 		utils.HttpReturnWithCodeOne(c, "关注失败，pid不存在")
 		return
 	}
 	s := c.PostForm("switch")
-	token := c.PostForm("user_token")
-	emailHash, err5 := db.GetInfoByToken(token)
-	if err5 != nil {
-		utils.HttpReturnWithCodeOne(c, "关注失败，请检查登录状态")
-		return
-	}
 
-	context, err6 := doAttentionLimiter.Get(c, emailHash)
-	if err6 != nil {
-		c.AbortWithStatus(500)
-		return
-	}
-	if context.Reached {
-		log.Printf("do_attention limiter limiter reached")
-		utils.HttpReturnWithCodeOne(c, "你今天关注太多树洞了，明天再来吧")
-		return
-	}
-
-	isAttention, err2 := db.IsAttention(emailHash, pid)
+	var isAttention int64
+	err2 := db.GetDb(false).Model(&structs.Attention{}).Where(&structs.Attention{PostID: post.ID, UserID: user.ID}).Count(&isAttention).Error
 	if err2 != nil {
 		log.Printf("error dbIsAttention while doAttention: %s\n", err2)
 		utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
@@ -397,35 +299,16 @@ func doAttention(c *gin.Context) {
 		return
 	}
 	if isAttention == 0 {
-		_, _ = db.AddAttentionIns.Exec(emailHash, pid)
-		_, _ = db.PlusOneAttentionIns.Exec(pid)
+		_ = db.GetDb(false).Create(&structs.Attention{UserID: user.ID, PostID: post.ID}).Error
+		post.LikeNum += 1
 	}
 	if isAttention == 1 {
-		_, _ = db.RemoveAttentionIns.Exec(emailHash, pid)
-		_, _ = db.MinusOneAttentionIns.Exec(pid)
+		_ = db.GetDb(false).Delete(&structs.Attention{UserID: user.ID, PostID: post.ID}).Error
+		post.LikeNum -= 1
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"code": 0,
+		"data": postToJson(post, user, isAttention == 0),
 	})
-}
-
-func apiPost(c *gin.Context) {
-	action := c.Query("action")
-	switch action {
-	case "docomment":
-		doComment(c)
-		return
-	case "dopost":
-		doPost(c)
-		return
-	case "attention":
-		doAttention(c)
-		return
-	case "report":
-		doReport(c)
-		return
-	default:
-		c.AbortWithStatus(403)
-	}
 }
