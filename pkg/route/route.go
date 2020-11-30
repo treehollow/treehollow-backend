@@ -78,6 +78,5 @@ func ServicesApiListenHttp() {
 		checkReportParams(false),
 		preprocessReportComment,
 		handleReport)
-	//TODO: compatibility with older version
 	_ = r.Run(viper.GetString("services_api_listen_address"))
 }

@@ -4,6 +4,6 @@ go:
 
 script:
   - go test ./pkg/...
-  - go build -o fallback-server ./cmd/fallback-server/main.go
+  - go build -o treehole-fallback ./cmd/treehole-fallback/main.go
   - go build -o treehole-login-api ./cmd/treehole-login-api/main.go
   - go build -o treehole-services-api ./cmd/treehole-services-api/main.go

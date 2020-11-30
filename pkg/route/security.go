@@ -49,7 +49,7 @@ func sendCode(c *gin.Context) {
 	}
 
 	hashedUser := utils.HashEmail(user)
-	if _, b := utils.ContainsString(viper.GetStringSlice("bannedEmailHashes"), hashedUser); b {
+	if _, b := utils.ContainsString(viper.GetStringSlice("banned_email_hashes"), hashedUser); b {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"msg":     "您的账户已被冻结。如果需要解冻，请联系" + viper.GetString("contact_email") + "。",
@@ -153,7 +153,8 @@ func login(c *gin.Context) {
 	user := c.Query("user")
 	code := c.Query("valid_code")
 	hashedUser := utils.HashEmail(user)
-	if _, b := utils.ContainsString(viper.GetStringSlice("bannedEmailHashes"), hashedUser); b {
+	//TODO: use sql instead of config file to get banned email hashes
+	if _, b := utils.ContainsString(viper.GetStringSlice("banned_email_hashes"), hashedUser); b {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"msg":     "您的账户已被冻结。如果需要解冻，请联系" + viper.GetString("contact_email") + "。",

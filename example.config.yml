@@ -67,7 +67,7 @@ allowed_register_countries:
 announcement: This is dev server.
 
 ### 永久封禁的用户邮箱哈希值列表。这些哈希值对应的邮箱无法注册。
-bannedemailhashes:
+banned_email_hashes:
   - d83f8dd178b6db458f6a2b5782a5758dd4250550e7f73bcd4ac963bebf967939
   - d83f8dd178b6db458f6a2b5782a5758dd4250550e7f73bcd4ac963bebf967938
 
