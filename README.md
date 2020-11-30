@@ -11,6 +11,11 @@
 ```bash
 git clone https://github.com/thuhole/thuhole-go-backend
 cd thuhole-go-backend
+
+# (optional)upgrade all dependencies
+go get -u ./...
+
+# install packages
 go install ./...
 ```
 

@@ -78,6 +78,10 @@ func detailPost(c *gin.Context) {
 
 func postToJson(post structs.Post, user structs.User, attention bool) gin.H {
 	offset := utils.CalcExtra(user.EmailHash, strconv.Itoa(int(post.ID)))
+	tag := post.Tag
+	if post.ReportNum >= 3 && !post.DeletedAt.Valid && tag == "" {
+		tag = "举报较多"
+	}
 	return gin.H{
 		"pid":         post.ID,
 		"text":        post.Text,
@@ -90,7 +94,7 @@ func postToJson(post structs.Post, user structs.User, attention bool) gin.H {
 		"permissions": permissions.GetPermissionsByPost(user, post),
 		"deleted":     post.DeletedAt.Valid,
 		"url":         utils.GetHashedFilePath(post.FilePath),
-		"tag":         utils.IfThenElse(len(post.Tag) != 0, post.Tag, nil),
+		"tag":         tag,
 	}
 }
 

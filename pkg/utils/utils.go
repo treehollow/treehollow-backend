@@ -9,7 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	libredis "github.com/go-redis/redis/v7"
+	libredis "github.com/go-redis/redis/v8"
 	"github.com/oschwald/geoip2-golang"
 	"github.com/sigurn/crc8"
 	"github.com/spf13/viper"
@@ -158,8 +158,7 @@ func InitLimiter(rate limiter.Rate, prefix string) *limiter.Limiter {
 	}
 	client := libredis.NewClient(option)
 	store, err2 := sredis.NewStoreWithOptions(client, limiter.StoreOptions{
-		Prefix:   prefix,
-		MaxRetry: 3,
+		Prefix: prefix,
 	})
 	if err2 != nil {
 		FatalErrorHandle(&err2, "failed init redis store")
