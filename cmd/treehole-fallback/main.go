@@ -60,7 +60,7 @@ func main() {
 	viper.SetDefault("fallback_listen_address", "127.0.0.1:3002")
 
 	r := gin.Default()
-	r.Use(cors.Default())
+	//r.Use(cors.Default())
 
 	//Old, compatibility fallback
 	r.POST("/api_xmcp/login/send_code", upgradePrompt)
