@@ -94,7 +94,7 @@ func postToJson(post structs.Post, user structs.User, attention bool) gin.H {
 		"permissions": permissions.GetPermissionsByPost(user, post),
 		"deleted":     post.DeletedAt.Valid,
 		"url":         utils.GetHashedFilePath(post.FilePath),
-		"tag":         tag,
+		"tag":         utils.IfThenElse(len(tag) == 0, nil, tag),
 	}
 }
 

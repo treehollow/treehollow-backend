@@ -123,9 +123,11 @@ type Ban struct {
 
 var emailHashToId = make(map[string]int32)
 
-func migrateAttentions(page int) {
+const batchSize = 3000
+
+func migrateAttentions(page int) (count int) {
 	var results []map[string]interface{}
-	err := db.GetDb(false).Table("v1_attentions").Limit(100000).Offset((page - 1) * 100000).
+	err := db.GetDb(false).Table("v1_attentions").Limit(batchSize).Offset((page - 1) * batchSize).
 		Find(&results).Error
 	utils.FatalErrorHandle(&err, "error reading v1_attentions!")
 	var attentions []Attention
@@ -136,16 +138,16 @@ func migrateAttentions(page int) {
 		}
 		attentions = append(attentions, at)
 	}
-	err = db.GetDb(false).
-		CreateInBatches(&attentions, 10000).Error
+	err = db.GetDb(false).Create(&attentions).Error
 	utils.FatalErrorHandle(&err, "error writing v1_attentions!")
-	attentions = nil
+	count = len(results)
+	return
 }
 
-func migratePost(page int) {
+func migratePost(page int) (count int) {
 	var results []map[string]interface{}
-	err := db.GetDb(false).Table("v1_posts").Where("pid <= ? and pid > ?", page*50000,
-		(page-1)*50000).Find(&results).Error
+	err := db.GetDb(false).Table("v1_posts").Where("pid <= ? and pid > ?", page*batchSize,
+		(page-1)*batchSize).Find(&results).Error
 	utils.FatalErrorHandle(&err, "error reading v1_posts!")
 	var posts []Post
 	for _, result := range results {
@@ -175,16 +177,17 @@ func migratePost(page int) {
 		}
 		posts = append(posts, post)
 	}
-	err = db.GetDb(false).CreateInBatches(&posts, 3000).Error
+	err = db.GetDb(false).Create(&posts).Error
 	utils.FatalErrorHandle(&err, "error writing v1_posts!")
-	posts = nil
+	count = len(results)
+	return
 }
 
-func migrateComment(page int) {
+func migrateComment(page int) (count int) {
 	var results []map[string]interface{}
 	var comments []Comment
-	err := db.GetDb(false).Table("v1_comments").Where("cid <= ? and cid > ?", page*100000,
-		(page-1)*100000).Find(&results).Error
+	err := db.GetDb(false).Table("v1_comments").Where("cid <= ? and cid > ?", page*batchSize,
+		(page-1)*batchSize).Find(&results).Error
 	utils.FatalErrorHandle(&err, "error reading v1_comments!")
 	for _, result := range results {
 		var deletedAt gorm.DeletedAt
@@ -211,9 +214,20 @@ func migrateComment(page int) {
 		}
 		comments = append(comments, comment)
 	}
-	err = db.GetDb(false).CreateInBatches(&comments, 3000).Error
+	err = db.GetDb(false).Create(&comments).Error
 	utils.FatalErrorHandle(&err, "error writing v1_comments!")
-	results = nil
+	count = len(results)
+	return
+}
+
+func migrate(foo func(int) int) {
+	count := -1
+	page := 1
+	for count != 0 {
+		count = foo(page)
+		page += 1
+	}
+
 }
 
 func main() {
@@ -223,21 +237,21 @@ func main() {
 
 	var err error
 	db.InitDb()
-	//TODO: uncomment these when migrating
-	//err = db.GetDb(false).Migrator().RenameTable("user_info", "v1_users")
-	//utils.FatalErrorHandle(&err, "error rename table")
-	//err = db.GetDb(false).Migrator().RenameTable("verification_codes", "v1_verification_codes")
-	//utils.FatalErrorHandle(&err, "error rename table")
-	//err = db.GetDb(false).Migrator().RenameTable("posts", "v1_posts")
-	//utils.FatalErrorHandle(&err, "error rename table")
-	//err = db.GetDb(false).Migrator().RenameTable("comments", "v1_comments")
-	//utils.FatalErrorHandle(&err, "error rename table")
-	//err = db.GetDb(false).Migrator().RenameTable("attentions", "v1_attentions")
-	//utils.FatalErrorHandle(&err, "error rename table")
-	//err = db.GetDb(false).Migrator().RenameTable("reports", "v1_reports")
-	//utils.FatalErrorHandle(&err, "error rename table")
-	//err = db.GetDb(false).Migrator().RenameTable("banned", "v1_banned")
-	//utils.FatalErrorHandle(&err, "error rename table")
+
+	err = db.GetDb(false).Migrator().RenameTable("user_info", "v1_users")
+	utils.FatalErrorHandle(&err, "error rename table")
+	err = db.GetDb(false).Migrator().RenameTable("verification_codes", "v1_verification_codes")
+	utils.FatalErrorHandle(&err, "error rename table")
+	err = db.GetDb(false).Migrator().RenameTable("posts", "v1_posts")
+	utils.FatalErrorHandle(&err, "error rename table")
+	err = db.GetDb(false).Migrator().RenameTable("comments", "v1_comments")
+	utils.FatalErrorHandle(&err, "error rename table")
+	err = db.GetDb(false).Migrator().RenameTable("attentions", "v1_attentions")
+	utils.FatalErrorHandle(&err, "error rename table")
+	err = db.GetDb(false).Migrator().RenameTable("reports", "v1_reports")
+	utils.FatalErrorHandle(&err, "error rename table")
+	err = db.GetDb(false).Migrator().RenameTable("banned", "v1_banned")
+	utils.FatalErrorHandle(&err, "error rename table")
 
 	err = db.GetDb(false).AutoMigrate(&User{}, &VerificationCode{}, &Post{}, &Comment{}, &Attention{}, &Report{}, &SystemMessage{}, Ban{})
 	utils.FatalErrorHandle(&err, "error migrating database!")
@@ -291,24 +305,13 @@ func main() {
 	vcs = nil
 	log.Println("done migrating verification_codes")
 
-	migrateAttentions(1)
-	migrateAttentions(2)
-	migrateAttentions(3)
-	migrateAttentions(4)
+	migrate(migrateAttentions)
 	log.Println("done migrating attentions")
 
-	migratePost(1)
-	migratePost(2)
-	migratePost(3)
+	migrate(migratePost)
 	log.Println("done migrating posts")
 
-	migrateComment(1)
-	migrateComment(2)
-	migrateComment(3)
-	migrateComment(4)
-	migrateComment(5)
-	migrateComment(6)
-	migrateComment(7)
+	migrate(migrateComment)
 	log.Println("done migrating comments")
 	log.Println("done all migration")
 
