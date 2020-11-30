@@ -23,13 +23,14 @@ go install ./...
 
 当后端程序运行时编辑`config.yml`可以热加载，不需要重启程序。
 
-执行`go install ./...`时会在`$GOROOT/bin`生成2个可执行文件：
+执行`go install ./...`时会在`$GOROOT/bin`生成3个可执行文件：
 - `treehole-services-api`: `/contents/*`, `/send/*`, `/edit/*`的API服务
 - `treehole-login-api`: `/security/*`的API服务
+- `treehole-fallback`: 服务宕机时的错误提示程序
 
 ## 部署方式
 
-除了编译出的2个可执行文件外，部署一个后端需要使用以下服务：
+除了编译出的3个可执行文件外，部署一个后端需要使用以下服务：
 - MySQL数据库。
 - Redis数据库。
 - Nginx。使得`config.yml`中`images_path`文件夹里的图片文件在网页上可访问到。

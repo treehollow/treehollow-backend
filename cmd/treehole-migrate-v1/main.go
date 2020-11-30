@@ -3,8 +3,8 @@ package main
 import (
 	"github.com/spf13/viper"
 	"gorm.io/gorm"
+	"log"
 	"thuhole-go-backend/pkg/config"
-	"thuhole-go-backend/pkg/consts"
 	"thuhole-go-backend/pkg/db"
 	"thuhole-go-backend/pkg/logger"
 	"thuhole-go-backend/pkg/utils"
@@ -123,7 +123,6 @@ type Ban struct {
 
 var emailHashToId = make(map[string]int32)
 
-//TODO: auto page
 func migrateAttentions(page int) {
 	var results []map[string]interface{}
 	err := db.GetDb(false).Table("v1_attentions").Limit(100000).Offset((page - 1) * 100000).
@@ -218,8 +217,9 @@ func migrateComment(page int) {
 }
 
 func main() {
-	logger.InitLog(consts.ServicesApiLogFile)
+	logger.InitLog("migration.log")
 	config.InitConfigFile()
+	log.Println("starting migration...")
 
 	var err error
 	db.InitDb()
@@ -271,6 +271,7 @@ func main() {
 		emailHashToId[user.EmailHash] = user.ID
 	}
 	users = nil
+	log.Println("done migrating users")
 
 	results = nil
 	err = db.GetDb(false).Table("v1_verification_codes").Find(&results).Error
@@ -288,15 +289,18 @@ func main() {
 	err = db.GetDb(false).CreateInBatches(&vcs, 10000).Error
 	utils.FatalErrorHandle(&err, "error writing v1_verification_codes!")
 	vcs = nil
+	log.Println("done migrating verification_codes")
 
 	migrateAttentions(1)
 	migrateAttentions(2)
 	migrateAttentions(3)
 	migrateAttentions(4)
+	log.Println("done migrating attentions")
 
 	migratePost(1)
 	migratePost(2)
 	migratePost(3)
+	log.Println("done migrating posts")
 
 	migrateComment(1)
 	migrateComment(2)
@@ -305,4 +309,8 @@ func main() {
 	migrateComment(5)
 	migrateComment(6)
 	migrateComment(7)
+	log.Println("done migrating comments")
+	log.Println("done all migration")
+
+	//	No need to migrate banned and reports db
 }

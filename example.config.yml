@@ -118,3 +118,9 @@ subnets_whitelist: [ ]
 
 ### 最新树洞Web版的版本号。树洞Web版会通过检查此版本号自动更新。
 web_frontend_version: v0.0.0
+
+### 当服务宕机时的提示信息
+fallback_announcement: 系统正在维护升级，请稍后重试...
+
+### 服务宕机时的错误提示程序监听端口
+fallback_listen_address: 127.0.0.1:8082
