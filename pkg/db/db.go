@@ -128,7 +128,7 @@ func SavePost(uid int32, text string, tag string, typ string, filePath string) (
 }
 
 func GetHotPosts() (posts []structs.Post, err error) {
-	err = db.Where("pid>(SELECT MAX(id)-2000 FROM posts)").
+	err = db.Where("id>(SELECT MAX(id)-2000 FROM posts)").
 		Order("like_num*3+reply_num+UNIX_TIMESTAMP(created_at)/1800-report_num*10 DESC").Limit(200).Find(&posts).Error
 	return
 }
