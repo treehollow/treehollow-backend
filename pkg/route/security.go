@@ -201,7 +201,10 @@ func login(c *gin.Context) {
 		return
 	}
 	token := utils.GenToken()
-	err = db.GetDb(false).Create(&structs.User{EmailHash: hashedUser, Token: token, Role: structs.NormalUserRole}).Error
+	err = db.GetDb(false).Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "email_hash"}},
+		DoUpdates: clause.AssignmentColumns([]string{"token"}),
+	}).Create(&structs.User{EmailHash: hashedUser, Token: token, Role: structs.NormalUserRole}).Error
 	if err != nil {
 		log.Printf("failed dbSaveToken while login, %s\n", err)
 		c.JSON(http.StatusOK, gin.H{

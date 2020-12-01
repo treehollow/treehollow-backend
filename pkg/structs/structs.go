@@ -34,7 +34,7 @@ const (
 // codebeat:disable[TOO_MANY_IVARS]
 type User struct {
 	ID             int32  `gorm:"primaryKey;autoIncrement;not null"`
-	EmailHash      string `gorm:"index;type:char(64) NOT NULL"`
+	EmailHash      string `gorm:"uniqueIndex;type:char(64) NOT NULL"`
 	Token          string `gorm:"index;type:char(32) NOT NULL"`
 	Role           UserRole
 	SystemMessages []SystemMessage
