@@ -213,6 +213,7 @@ func migrateComment(page int) (count int) {
 			Tag:       result["tag"].(string),
 			Type:      result["type"].(string),
 			FilePath:  result["file_path"].(string),
+			Name:      result["name"].(string),
 			CreatedAt: time.Unix(int64(result["timestamp"].(int32)), 0),
 			DeletedAt: deletedAt,
 		}
