@@ -153,6 +153,7 @@ func adminHelpCommand() gin.HandlerFunc {
 			info := ""
 			if permissions.CanViewDeletedPost(user) {
 				info += "`deleted` - 搜索所有被删的树洞和回复\n"
+				info += "`//setflag NOT_SHOW_DELETED=on` - （注意大小写）在除了`deleted`搜索界面外的其他界面隐藏被删除的树洞\n"
 			}
 			if permissions.CanViewAllSystemMessages(user) {
 				info += "`messages` - 查看所有用户收到的系统消息\n"
