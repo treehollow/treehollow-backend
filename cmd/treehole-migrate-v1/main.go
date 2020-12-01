@@ -138,9 +138,11 @@ func migrateAttentions(page int) (count int) {
 		}
 		attentions = append(attentions, at)
 	}
-	err = db.GetDb(false).Create(&attentions).Error
-	utils.FatalErrorHandle(&err, "error writing v1_attentions!")
 	count = len(results)
+	if count > 0 {
+		err = db.GetDb(false).Create(&attentions).Error
+		utils.FatalErrorHandle(&err, "error writing v1_attentions!")
+	}
 	return
 }
 
@@ -177,9 +179,11 @@ func migratePost(page int) (count int) {
 		}
 		posts = append(posts, post)
 	}
-	err = db.GetDb(false).Create(&posts).Error
-	utils.FatalErrorHandle(&err, "error writing v1_posts!")
 	count = len(results)
+	if count > 0 {
+		err = db.GetDb(false).Create(&posts).Error
+		utils.FatalErrorHandle(&err, "error writing v1_posts!")
+	}
 	return
 }
 
@@ -214,9 +218,11 @@ func migrateComment(page int) (count int) {
 		}
 		comments = append(comments, comment)
 	}
-	err = db.GetDb(false).Create(&comments).Error
-	utils.FatalErrorHandle(&err, "error writing v1_comments!")
 	count = len(results)
+	if count > 0 {
+		err = db.GetDb(false).Create(&comments).Error
+		utils.FatalErrorHandle(&err, "error writing v1_comments!")
+	}
 	return
 }
 
@@ -238,20 +244,20 @@ func main() {
 	var err error
 	db.InitDb()
 
-	err = db.GetDb(false).Migrator().RenameTable("user_info", "v1_users")
-	utils.FatalErrorHandle(&err, "error rename table")
-	err = db.GetDb(false).Migrator().RenameTable("verification_codes", "v1_verification_codes")
-	utils.FatalErrorHandle(&err, "error rename table")
-	err = db.GetDb(false).Migrator().RenameTable("posts", "v1_posts")
-	utils.FatalErrorHandle(&err, "error rename table")
-	err = db.GetDb(false).Migrator().RenameTable("comments", "v1_comments")
-	utils.FatalErrorHandle(&err, "error rename table")
-	err = db.GetDb(false).Migrator().RenameTable("attentions", "v1_attentions")
-	utils.FatalErrorHandle(&err, "error rename table")
-	err = db.GetDb(false).Migrator().RenameTable("reports", "v1_reports")
-	utils.FatalErrorHandle(&err, "error rename table")
-	err = db.GetDb(false).Migrator().RenameTable("banned", "v1_banned")
-	utils.FatalErrorHandle(&err, "error rename table")
+	//err = db.GetDb(false).Migrator().RenameTable("user_info", "v1_users")
+	//utils.FatalErrorHandle(&err, "error rename table")
+	//err = db.GetDb(false).Migrator().RenameTable("verification_codes", "v1_verification_codes")
+	//utils.FatalErrorHandle(&err, "error rename table")
+	//err = db.GetDb(false).Migrator().RenameTable("posts", "v1_posts")
+	//utils.FatalErrorHandle(&err, "error rename table")
+	//err = db.GetDb(false).Migrator().RenameTable("comments", "v1_comments")
+	//utils.FatalErrorHandle(&err, "error rename table")
+	//err = db.GetDb(false).Migrator().RenameTable("attentions", "v1_attentions")
+	//utils.FatalErrorHandle(&err, "error rename table")
+	//err = db.GetDb(false).Migrator().RenameTable("reports", "v1_reports")
+	//utils.FatalErrorHandle(&err, "error rename table")
+	//err = db.GetDb(false).Migrator().RenameTable("banned", "v1_banned")
+	//utils.FatalErrorHandle(&err, "error rename table")
 
 	err = db.GetDb(false).AutoMigrate(&User{}, &VerificationCode{}, &Post{}, &Comment{}, &Attention{}, &Report{}, &SystemMessage{}, Ban{})
 	utils.FatalErrorHandle(&err, "error migrating database!")
