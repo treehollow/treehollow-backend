@@ -152,20 +152,20 @@ func adminHelpCommand() gin.HandlerFunc {
 		if permissions.CanShowHelp(user) && keywords == "help" {
 			info := ""
 			if permissions.CanViewDeletedPost(user) {
-				info += "`deleted` - 搜索所有被删的树洞和回复\n"
-				info += "`//setflag NOT_SHOW_DELETED=on` - （注意大小写）在除了`deleted`搜索界面外的其他界面隐藏被删除的树洞\n"
+				info += "`deleted`: 搜索所有被删的树洞和回复\n"
+				info += "`//setflag NOT_SHOW_DELETED=on`(注意大小写): 在除了`deleted`搜索界面外的其他界面隐藏被删除的树洞\n"
 			}
 			if permissions.CanViewAllSystemMessages(user) {
-				info += "`messages` - 查看所有用户收到的系统消息\n"
+				info += "`messages`: 查看所有用户收到的系统消息\n"
 			}
 			if permissions.CanViewReports(user) {
-				info += "`reports` - 查看所有用户的删除举报(树洞or回复)\n"
+				info += "`reports`: 查看所有用户的删除举报(树洞or回复)\n"
 			}
 			if permissions.CanViewStatistics(user) {
-				info += "`statistics` - 查看树洞统计信息\n"
+				info += "`statistics`: 查看树洞统计信息\n"
 			}
 			if permissions.CanShutdown(user) {
-				info += "`shutdown` - 关闭树洞, 请谨慎使用此命令\n"
+				info += "`shutdown`: 关闭树洞, 请谨慎使用此命令\n"
 			}
 			httpReturnInfo(c, info)
 			return
