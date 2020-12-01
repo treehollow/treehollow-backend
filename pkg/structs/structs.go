@@ -107,7 +107,7 @@ type Attention struct {
 	User   User
 	UserID int32 `gorm:"primaryKey;index"`
 	Post   Post
-	PostID int32 `gorm:"primaryKey"`
+	PostID int32 `gorm:"primaryKey;index"`
 }
 
 type SystemMessage struct {
