@@ -32,21 +32,21 @@ func (comment *Comment) AfterCreate(tx *gorm.DB) (err error) {
 }
 
 func (attention *Attention) AfterCreate(tx *gorm.DB) (err error) {
-	err = tx.Model(&Post{ID: attention.PostID}).
-		Update("like_num", gorm.Expr("like_num + 1")).Error
+	err = tx.Table("posts").Where("id = ?", attention.PostID).
+		UpdateColumn("like_num", gorm.Expr("like_num + 1")).Error
 	return
 }
 
 func (attention *Attention) AfterDelete(tx *gorm.DB) (err error) {
-	err = tx.Model(&Post{ID: attention.PostID}).
-		Update("like_num", gorm.Expr("like_num - 1")).Error
+	err = tx.Table("posts").Where("id = ?", attention.PostID).
+		UpdateColumn("like_num", gorm.Expr("like_num - 1")).Error
 	return
 }
 
 func (report *Report) AfterCreate(tx *gorm.DB) (err error) {
 	if report.Type == UserReport && !report.IsComment {
-		err = tx.Model(&Post{ID: report.PostID}).
-			Update("report_num", gorm.Expr("report_num + 1")).Error
+		err = tx.Table("posts").Where("id = ?", report.PostID).
+			UpdateColumn("report_num", gorm.Expr("report_num + 1")).Error
 	}
 	return
 }

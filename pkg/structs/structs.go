@@ -141,7 +141,6 @@ func (report *Report) ToString() string {
 	} else {
 		name = fmt.Sprintf("To:树洞#%d", report.PostID)
 	}
-	rtn = fmt.Sprintf("%s\nFrom User ID:%d\nTo User ID:%d\n***\n Reason: %s", name, report.UserID,
-		report.ReportedUserID, report.Reason)
+	rtn = fmt.Sprintf("%s\n***\n Reason: %s", name, report.Reason)
 	return rtn
 }
