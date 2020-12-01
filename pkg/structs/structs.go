@@ -64,7 +64,7 @@ type Post struct {
 	ReplyNum  int32
 	ReportNum int32
 	Comments  []Comment
-	CreatedAt time.Time
+	CreatedAt time.Time      `gorm:"index"`
 	UpdatedAt time.Time      `gorm:"index"`
 	DeletedAt gorm.DeletedAt `gorm:"index"`
 }
