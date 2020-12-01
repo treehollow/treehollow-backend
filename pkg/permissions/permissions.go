@@ -6,7 +6,14 @@ import (
 )
 
 func GetPermissionsByPost(user structs.User, post structs.Post) []string {
-	rtn := []string{"fold", "report"}
+	return getPermissions(user, post, false)
+}
+
+func getPermissions(user structs.User, post structs.Post, isComment bool) []string {
+	rtn := []string{"report"}
+	if !isComment {
+		rtn = append(rtn, "fold")
+	}
 	timestamp := utils.GetTimeStamp()
 	if (user.Role == structs.AdminRole || user.Role == structs.DeleterRole || user.Role == structs.SuperUserRole ||
 		((timestamp-post.CreatedAt.Unix() <= 120) && (user.ID == post.UserID))) && (!post.DeletedAt.Valid) {
@@ -31,11 +38,11 @@ func GetPermissionsByPost(user structs.User, post structs.Post) []string {
 }
 
 func GetPermissionsByComment(user structs.User, comment structs.Comment) []string {
-	return GetPermissionsByPost(user, structs.Post{
+	return getPermissions(user, structs.Post{
 		DeletedAt: comment.DeletedAt,
 		CreatedAt: comment.CreatedAt,
 		UserID:    comment.UserID,
-	})
+	}, true)
 }
 
 func GetReportWeight(user structs.User) int32 {
