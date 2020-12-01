@@ -189,7 +189,7 @@ func adminStatisticsCommand() gin.HandlerFunc {
 			info += "总注册人数：" + strconv.Itoa(int(count)) + "\n"
 
 			err = db.GetDb(true).Model(&structs.Post{}).
-				Where("UNIX_TIMESTAMP(created_at) > ?", time.Unix(utils.GetTimeStamp()-86400, 0)).
+				Where("created_at > ?", time.Unix(utils.GetTimeStamp()-86400, 0)).
 				Count(&count).Error
 			if err != nil {
 				log.Printf("search 24h posts count failed. err=%s\n", err)
