@@ -220,7 +220,7 @@ func handleReport(c *gin.Context) {
 				err = db.DeleteAndBan(report, utils.TrimText(getPostOrCommentText(c, report.IsComment), 20))
 			}
 		case structs.UserReportFold:
-			if report.ReportedUserID == report.UserID {
+			if report.ReportedUserID == report.UserID && !report.IsComment {
 				err = db.SetTagByReport(report)
 			} else {
 				var reportScore int64
