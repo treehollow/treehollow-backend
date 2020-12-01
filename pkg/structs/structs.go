@@ -31,6 +31,7 @@ const (
 	//	For now, there's no "undelete + no unban" option
 )
 
+// codebeat:disable[TOO_MANY_IVARS]
 type User struct {
 	ID             int32  `gorm:"primaryKey;autoIncrement;not null"`
 	EmailHash      string `gorm:"index;type:char(64) NOT NULL"`
