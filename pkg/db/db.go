@@ -116,7 +116,7 @@ func SearchPosts(p int, pageSize int, keywords string, limitPids []int32, user s
 func GetVerificationCode(emailHash string) (string, int64, int, error) {
 	var vc structs.VerificationCode
 	err := db.Where("email_hash = ?", emailHash).First(&vc).Error
-	return vc.Code, vc.CreatedAt.Unix(), vc.FailedTimes, err
+	return vc.Code, vc.UpdatedAt.Unix(), vc.FailedTimes, err
 }
 
 func SavePost(uid int32, text string, tag string, typ string, filePath string) (id int32, err error) {
