@@ -72,7 +72,7 @@ type Post struct {
 type Comment struct {
 	ID        int32 `gorm:"primaryKey;autoIncrement;not null"`
 	Post      Post
-	PostID    int32
+	PostID    int32 `gorm:"index"`
 	User      User
 	UserID    int32
 	Text      string `gorm:"index:,class:FULLTEXT,option:WITH PARSER ngram;type: varchar(10000) NOT NULL"`
