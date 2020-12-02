@@ -35,6 +35,7 @@ func ServicesApiListenHttp() {
 		checkParameterPageSize(),
 		searchHotPosts(),
 		adminHelpCommand(),
+		adminActionsCommand(),
 		adminReportsCommand(),
 		adminStatisticsCommand(),
 		adminSysMsgsCommand(),

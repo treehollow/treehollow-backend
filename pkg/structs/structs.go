@@ -137,10 +137,41 @@ func (report *Report) ToString() string {
 	rtn := ""
 	var name string
 	if report.IsComment {
-		name = fmt.Sprintf("To:树洞回复#%d - %d", report.PostID, report.CommentID)
+		name = fmt.Sprintf("To:树洞回复#%d-%d", report.PostID, report.CommentID)
 	} else {
 		name = fmt.Sprintf("To:树洞#%d", report.PostID)
 	}
 	rtn = fmt.Sprintf("%s\n***\n Reason: %s", name, report.Reason)
 	return rtn
+}
+
+func (typ *ReportType) ToString() string {
+	switch *typ {
+	case UserReport:
+		return "用户举报"
+	case UserReportFold:
+		return "用户举报折叠"
+	case AdminTag:
+		return "管理员打Tag"
+	case UserDelete:
+		return "撤回或管理员删除"
+	case AdminUndelete:
+		return "撤销删除并解禁"
+	case AdminDeleteAndBan:
+		return "删帖禁言"
+	case AdminUnban:
+		return "解禁"
+	default:
+		return "unknown"
+	}
+}
+
+func (report *Report) ToDetailedString() string {
+	rtn := fmt.Sprintf("From User ID:%d\nTo User ID:%d\nType:%s\n%s", report.UserID, report.ReportedUserID,
+		report.Type.ToString(), report.ToString())
+	return rtn
+}
+
+func (msg *SystemMessage) ToString() string {
+	return fmt.Sprintf("User ID:%d\nTitle:%s\n***\n%s", msg.UserID, msg.Title, msg.Text)
 }

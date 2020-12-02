@@ -75,6 +75,10 @@ func CanViewReports(user structs.User) bool {
 		user.Role == structs.SuperUserRole
 }
 
+func CanViewActions(user structs.User) bool {
+	return user.Role == structs.AdminRole || user.Role == structs.SuperUserRole
+}
+
 func CanShowHelp(user structs.User) bool {
 	return user.Role == structs.AdminRole || user.Role == structs.DeleterRole || user.Role == structs.UnDeleterRole ||
 		user.Role == structs.SuperUserRole

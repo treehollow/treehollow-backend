@@ -175,7 +175,7 @@ func calcBanExpireTime(times int64) int64 {
 func generateBanReason(report structs.Report, originalText string) (rtn string) {
 	var pre string
 	if report.IsComment {
-		pre = "您的树洞评论#" + strconv.Itoa(int(report.CommentID))
+		pre = "您的树洞评论#" + strconv.Itoa(int(report.PostID)) + "-" + strconv.Itoa(int(report.CommentID))
 	} else {
 		pre = "您的树洞#" + strconv.Itoa(int(report.PostID))
 	}
