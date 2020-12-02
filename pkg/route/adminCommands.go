@@ -136,7 +136,7 @@ func adminActionsCommand() gin.HandlerFunc {
 		user := c.MustGet("user").(structs.User)
 		keywords := c.Query("keywords")
 		if permissions.CanViewActions(user) {
-			if _, ok := utils.ContainsString([]string{"actions", "reports", "folds", "set_tags", "deletes",
+			if _, ok := utils.ContainsString([]string{"actions", "reports", "folds", "set_tags", "deletes", "recalls",
 				"undelete_unbans", "delete_bans", "unbans"}, keywords); ok {
 
 				page := c.MustGet("page").(int)

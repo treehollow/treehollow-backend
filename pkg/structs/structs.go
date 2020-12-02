@@ -173,7 +173,7 @@ func (report *Report) ToDetailedString() string {
 		typeStr = utils.IfThenElse(report.UserID == report.ReportedUserID, "撤回", "管理员删除").(string)
 	}
 	rtn := fmt.Sprintf("From User ID:%d\nTo User ID:%d\nType:%s\n%s", report.UserID, report.ReportedUserID,
-		report.Type.ToString(), typeStr)
+		typeStr, report.ToString())
 	return rtn
 }
 
