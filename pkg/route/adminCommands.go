@@ -150,7 +150,7 @@ func adminActionsCommand() gin.HandlerFunc {
 						Limit(limit).Offset(offset).Find(&reports).Error
 				} else {
 					typ := getReportType(keywords[:len(keywords)-1])
-					err = db.GetDb(false).Order("id desc").Where("type = ？", typ).
+					err = db.GetDb(false).Order("id desc").Where("type = ?", typ).
 						Limit(limit).Offset(offset).Find(&reports).Error
 				}
 				if err != nil {
