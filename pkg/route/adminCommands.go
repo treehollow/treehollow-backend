@@ -35,7 +35,8 @@ func adminHelpCommand() gin.HandlerFunc {
 			if permissions.CanViewActions(user) {
 				info += "`folds`: 查看所有【用户举报折叠】的操作日志\n"
 				info += "`set_tags`: 查看所有【管理员打Tag】的操作日志\n"
-				info += "`deletes`: 查看所有的【撤回】或【管理员删除】\n"
+				info += "`deletes`: 查看所有的【管理员删除】\n"
+				info += "`recalls`: 查看所有的【撤回】\n"
 				info += "`undelete_unbans`: 查看所有【撤销删除并解禁】的操作日志\n"
 				info += "`delete_bans`: 查看所有【删帖禁言】的操作日志\n"
 				info += "`unbans`: 查看所有用户【解禁】的操作日志\n"
@@ -148,6 +149,12 @@ func adminActionsCommand() gin.HandlerFunc {
 				if keywords == "actions" {
 					err = db.GetDb(false).Order("id desc").
 						Limit(limit).Offset(offset).Find(&reports).Error
+				} else if keywords == "deletes" {
+					err = db.GetDb(false).Order("id desc").Where("type = ?", structs.UserDelete).
+						Where("user_id != reported_user_id").Limit(limit).Offset(offset).Find(&reports).Error
+				} else if keywords == "recalls" {
+					err = db.GetDb(false).Order("id desc").Where("type = ?", structs.UserDelete).
+						Where("user_id = reported_user_id").Limit(limit).Offset(offset).Find(&reports).Error
 				} else {
 					typ := getReportType(keywords[:len(keywords)-1])
 					err = db.GetDb(false).Order("id desc").Where("type = ?", typ).

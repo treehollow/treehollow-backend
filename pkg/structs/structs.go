@@ -3,6 +3,7 @@ package structs
 import (
 	"fmt"
 	"gorm.io/gorm"
+	"thuhole-go-backend/pkg/utils"
 	"time"
 )
 
@@ -167,8 +168,12 @@ func (typ *ReportType) ToString() string {
 }
 
 func (report *Report) ToDetailedString() string {
+	typeStr := report.ToString()
+	if report.Type == UserDelete {
+		typeStr = utils.IfThenElse(report.UserID == report.ReportedUserID, "撤回", "管理员删除").(string)
+	}
 	rtn := fmt.Sprintf("From User ID:%d\nTo User ID:%d\nType:%s\n%s", report.UserID, report.ReportedUserID,
-		report.Type.ToString(), report.ToString())
+		report.Type.ToString(), typeStr)
 	return rtn
 }
 

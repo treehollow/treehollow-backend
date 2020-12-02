@@ -76,7 +76,7 @@ func CanViewReports(user structs.User) bool {
 }
 
 func CanViewActions(user structs.User) bool {
-	return user.Role == structs.AdminRole || user.Role == structs.SuperUserRole
+	return user.Role == structs.SuperUserRole
 }
 
 func CanShowHelp(user structs.User) bool {
