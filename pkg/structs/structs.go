@@ -168,7 +168,7 @@ func (typ *ReportType) ToString() string {
 }
 
 func (report *Report) ToDetailedString() string {
-	typeStr := report.ToString()
+	typeStr := report.Type.ToString()
 	if report.Type == UserDelete {
 		typeStr = utils.IfThenElse(report.UserID == report.ReportedUserID, "撤回", "管理员删除").(string)
 	}
