@@ -20,27 +20,25 @@ func adminHelpCommand() gin.HandlerFunc {
 		if permissions.CanShowHelp(user) && keywords == "help" {
 			info := ""
 			if permissions.CanViewStatistics(user) {
-				info += "`statistics`: 查看树洞统计信息\n"
+				info += "`stats`: 查看树洞统计信息\n"
 			}
 			if permissions.CanViewDeletedPost(user) {
-				info += "`deleted`: 搜索所有被删的树洞和回复\n"
+				info += "`dels`: 搜索所有被管理员删除的树洞和回复(包括删除后恢复的)\n"
 				info += "`//setflag NOT_SHOW_DELETED=on`(注意大小写): 在除了`deleted`搜索界面外的其他界面隐藏被删除的树洞\n"
 			}
 			if permissions.CanViewAllSystemMessages(user) {
-				info += "`messages`: 查看所有用户收到的系统消息\n"
+				info += "`msgs`: 查看所有用户收到的系统消息\n"
 			}
 			if permissions.CanViewReports(user) {
-				info += "`reports`: 查看所有用户的删除举报(树洞or回复)\n"
+				info += "`rep_dels`: 查看所有用户的【删除举报】(树洞or回复)\n"
 			}
-			if permissions.CanViewActions(user) {
-				info += "`folds`: 查看所有【用户举报折叠】的操作日志\n"
-				info += "`set_tags`: 查看所有【管理员打Tag】的操作日志\n"
-				info += "`deletes`: 查看所有的【管理员删除】\n"
-				info += "`recalls`: 查看所有的【撤回】\n"
-				info += "`undelete_unbans`: 查看所有【撤销删除并解禁】的操作日志\n"
-				info += "`delete_bans`: 查看所有【删帖禁言】的操作日志\n"
-				info += "`unbans`: 查看所有用户【解禁】的操作日志\n"
-				info += "`actions`: 查看所有举报、删帖、打tag的操作日志\n"
+			if permissions.CanViewLogs(user) {
+				info += "`rep_recalls`: 查看所有用户的【撤回】(树洞or回复)\n"
+				info += "`rep_folds`: 查看所有用户的【折叠举报】(树洞or回复)\n"
+				info += "`log_tags`: 查看所有【管理员打Tag】的操作日志\n"
+				info += "`log_dels`: 查看所有的【管理员删除】\n"
+				info += "`log_unbans`: 查看所有【撤销删除】、【解禁】的操作日志\n"
+				info += "`logs`: 查看所有举报、删帖、打tag的操作日志\n"
 			}
 			if permissions.CanShutdown(user) {
 				info += "`shutdown`: 关闭树洞, 请谨慎使用此命令\n"
@@ -56,7 +54,7 @@ func adminStatisticsCommand() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user := c.MustGet("user").(structs.User)
 		keywords := c.Query("keywords")
-		if permissions.CanViewStatistics(user) && keywords == "statistics" {
+		if permissions.CanViewStatistics(user) && keywords == "stats" {
 			var count int64
 			err := db.GetDb(true).Model(&structs.User{}).Count(&count).Error
 			info := ""
@@ -98,7 +96,7 @@ func adminReportsCommand() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user := c.MustGet("user").(structs.User)
 		keywords := c.Query("keywords")
-		if permissions.CanViewReports(user) && keywords == "reports" {
+		if permissions.CanViewReports(user) && keywords == "rep_dels" {
 			page := c.MustGet("page").(int)
 			pageSize := c.MustGet("page_size").(int)
 			offset := (page - 1) * pageSize
@@ -131,13 +129,13 @@ func adminReportsCommand() gin.HandlerFunc {
 	}
 }
 
-func adminActionsCommand() gin.HandlerFunc {
+func adminLogsCommand() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user := c.MustGet("user").(structs.User)
 		keywords := c.Query("keywords")
-		if permissions.CanViewActions(user) {
-			if _, ok := utils.ContainsString([]string{"actions", "reports", "folds", "set_tags", "deletes", "recalls",
-				"undelete_unbans", "delete_bans", "unbans"}, keywords); ok {
+		if permissions.CanViewLogs(user) {
+			if _, ok := utils.ContainsString([]string{"logs", "rep_dels", "rep_folds", "log_tags", "log_dels",
+				"rep_recalls", "log_unbans"}, keywords); ok {
 
 				page := c.MustGet("page").(int)
 				pageSize := c.MustGet("page_size").(int)
@@ -146,22 +144,33 @@ func adminActionsCommand() gin.HandlerFunc {
 				var reports []structs.Report
 
 				var err error
-				if keywords == "actions" {
+				if keywords == "logs" {
 					err = db.GetDb(false).Order("id desc").
 						Limit(limit).Offset(offset).Find(&reports).Error
-				} else if keywords == "deletes" {
-					err = db.GetDb(false).Order("id desc").Where("type = ?", structs.UserDelete).
-						Where("user_id != reported_user_id").Limit(limit).Offset(offset).Find(&reports).Error
-				} else if keywords == "recalls" {
+				} else if keywords == "log_dels" {
+					err = db.GetDb(false).Order("id desc").Where(db.GetDb(false).
+						Where("type = ?", structs.UserDelete).
+						Where("user_id != reported_user_id")).
+						Or("type = ?", structs.AdminDeleteAndBan).Limit(limit).Offset(offset).Find(&reports).Error
+				} else if keywords == "rep_recalls" {
 					err = db.GetDb(false).Order("id desc").Where("type = ?", structs.UserDelete).
 						Where("user_id = reported_user_id").Limit(limit).Offset(offset).Find(&reports).Error
-				} else {
-					typ := getReportType(keywords[:len(keywords)-1])
-					err = db.GetDb(false).Order("id desc").Where("type = ?", typ).
+				} else if keywords == "rep_dels" {
+					err = db.GetDb(false).Order("id desc").Where("type = ?", structs.UserReport).
+						Where("user_id = reported_user_id").Limit(limit).Offset(offset).Find(&reports).Error
+				} else if keywords == "rep_folds" {
+					err = db.GetDb(false).Order("id desc").Where("type = ?", structs.UserReportFold).
+						Limit(limit).Offset(offset).Find(&reports).Error
+				} else if keywords == "log_tags" {
+					err = db.GetDb(false).Order("id desc").Where("type = ?", structs.AdminTag).
+						Limit(limit).Offset(offset).Find(&reports).Error
+				} else if keywords == "log_unbans" {
+					err = db.GetDb(false).Order("id desc").Where("type in (?)",
+						[]structs.ReportType{structs.AdminUnban, structs.AdminUndelete}).
 						Limit(limit).Offset(offset).Find(&reports).Error
 				}
 				if err != nil {
-					log.Printf("search actions failed. err=%s\n", err)
+					log.Printf("search logs failed. err=%s\n", err)
 					utils.HttpReturnWithCodeOneAndAbort(c, "数据库读取失败，请联系管理员")
 					return
 				}
@@ -188,7 +197,7 @@ func adminSysMsgsCommand() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user := c.MustGet("user").(structs.User)
 		keywords := c.Query("keywords")
-		if permissions.CanViewAllSystemMessages(user) && keywords == "messages" {
+		if permissions.CanViewAllSystemMessages(user) && keywords == "msgs" {
 			page := c.MustGet("page").(int)
 			pageSize := c.MustGet("page_size").(int)
 			offset := (page - 1) * pageSize

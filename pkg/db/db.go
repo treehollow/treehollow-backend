@@ -90,11 +90,11 @@ func SearchPosts(p int, pageSize int, keywords string, limitPids []int32, user s
 			Or("id in (?)", subQuery)
 		err = tx.Where(subQuery2).Where("id != ?", pid).
 			Order("id desc").Limit(limit).Offset(offset).Find(&posts).Error
-	} else if canViewDelete && keywords == "deleted" {
-		subQuery := db.Unscoped().Model(&structs.Comment{}).Distinct().Where("deleted_at is not null").
-			Select("post_id")
-		subQuery2 := db.Unscoped().Where("deleted_at is not null").Or("id in (?)", subQuery)
-		err = db.Unscoped().Where(subQuery2).Where("id != ?", pid).
+	} else if canViewDelete && keywords == "dels" {
+		subQuery1 := db.Unscoped().Model(&structs.Report{}).Distinct().
+			Where("type in (?) and user_id != reported_user_id and post_id = posts.id",
+				[]structs.ReportType{structs.UserDelete, structs.AdminDeleteAndBan}).Select("post_id")
+		err = db.Unscoped().Where("id in (?)", subQuery1).
 			Order("id desc").Limit(limit).Offset(offset).Find(&posts).Error
 	} else {
 		replacedKeywords := "+" + strings.ReplaceAll(keywords, " ", " +")

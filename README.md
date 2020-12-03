@@ -57,12 +57,12 @@ server {
     }
 }
 ```
-### thuhole.com.conf
+### api.thuhole.com.conf
 ```
 server {
     listen 80;
 
-    server_name thuhole.com;
+    server_name api.thuhole.com;
     index index.html index.htm;
 
     root /path/to/webhole/folder/;

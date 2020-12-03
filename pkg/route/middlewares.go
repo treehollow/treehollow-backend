@@ -1,6 +1,7 @@
 package route
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
 	"github.com/ulule/limiter/v3"
@@ -85,9 +86,14 @@ func authMiddleware() gin.HandlerFunc {
 		var user structs.User
 		err := db.GetDb(false).Where("token = ?", token).First(&user).Error
 		if err != nil {
+			fmt.Println(err.Error())
+			if err.Error() != "record not found" {
+				log.Printf("auth failed. err=%s\n", err)
+				utils.HttpReturnWithCodeOneAndAbort(c, "数据库读取失败，请联系管理员。")
+				return
+			}
 			if !viper.GetBool("allow_unregistered_access") && !utils.IsInAllowedSubnet(c.ClientIP()) {
 				utils.HttpReturnWithCodeOneAndAbort(c, "登录凭据过期，请使用邮箱重新登录。")
-
 				return
 			} else {
 				c.Set("user", structs.User{ID: -1, Role: structs.UnregisteredRole, EmailHash: ""})
