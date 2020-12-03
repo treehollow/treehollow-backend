@@ -157,7 +157,7 @@ func adminLogsCommand() gin.HandlerFunc {
 						Where("user_id = reported_user_id").Limit(limit).Offset(offset).Find(&reports).Error
 				} else if keywords == "rep_dels" {
 					err = db.GetDb(false).Order("id desc").Where("type = ?", structs.UserReport).
-						Where("user_id = reported_user_id").Limit(limit).Offset(offset).Find(&reports).Error
+						Limit(limit).Offset(offset).Find(&reports).Error
 				} else if keywords == "rep_folds" {
 					err = db.GetDb(false).Order("id desc").Where("type = ?", structs.UserReportFold).
 						Limit(limit).Offset(offset).Find(&reports).Error
