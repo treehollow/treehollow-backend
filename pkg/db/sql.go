@@ -20,6 +20,8 @@ import (
 var db *gorm.DB
 
 func InitDb() {
+	_ = initRedis()
+
 	logFile, err := os.OpenFile("sql.log", os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
 	utils.FatalErrorHandle(&err, "error init sql log file")
 	mw := io.MultiWriter(os.Stdout, logFile)
@@ -54,7 +56,7 @@ func ListPosts(p int, user structs.User) (posts []structs.Post, err error) {
 	offset := (p - 1) * consts.PageSize
 	limit := consts.PageSize
 	pinnedPids := viper.GetIntSlice("pin_pids")
-	tx := GetDb(permissions.CanViewDeletedPost(user))
+	tx := GetDb(permissions.CanViewDeletedPost(&user))
 	if len(pinnedPids) == 0 {
 		err = tx.Order("id desc").Limit(limit).Offset(offset).Find(&posts).Error
 	} else {
@@ -64,7 +66,7 @@ func ListPosts(p int, user structs.User) (posts []structs.Post, err error) {
 }
 
 func SearchPosts(p int, pageSize int, keywords string, limitPids []int32, user structs.User) (posts []structs.Post, err error) {
-	canViewDelete := permissions.CanViewDeletedPost(user)
+	canViewDelete := permissions.CanViewDeletedPost(&user)
 	var thePost structs.Post
 	var err2 error
 	pid := -1

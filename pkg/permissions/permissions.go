@@ -5,20 +5,21 @@ import (
 	"thuhole-go-backend/pkg/utils"
 )
 
-func GetPermissionsByPost(user structs.User, post structs.Post) []string {
+func GetPermissionsByPost(user *structs.User, post *structs.Post) []string {
 	return getPermissions(user, post, false)
 }
 
-func getPermissions(user structs.User, post structs.Post, isComment bool) []string {
+func getPermissions(user *structs.User, post *structs.Post, isComment bool) []string {
 	rtn := []string{"report"}
 	if !isComment {
 		rtn = append(rtn, "fold")
 	}
 	timestamp := utils.GetTimeStamp()
-	if (user.Role == structs.AdminRole || user.Role == structs.DeleterRole || user.Role == structs.SuperUserRole ||
+	if (user.Role == structs.AdminRole || user.Role == structs.SuperUserRole ||
 		((timestamp-post.CreatedAt.Unix() <= 120) && (user.ID == post.UserID))) && (!post.DeletedAt.Valid) {
 		rtn = append(rtn, "delete")
 	}
+
 	if user.Role == structs.AdminRole || user.Role == structs.SuperUserRole {
 		rtn = append(rtn, "set_tag")
 		if post.DeletedAt.Valid {
@@ -27,63 +28,76 @@ func getPermissions(user structs.User, post structs.Post, isComment bool) []stri
 		} else {
 			rtn = append(rtn, "delete_ban")
 		}
-	} else if user.Role == structs.DeleterRole && !post.DeletedAt.Valid {
+	} else if (timestamp-post.CreatedAt.Unix() <= 172800) && user.Role == structs.DeleterRole && !post.DeletedAt.Valid {
 		rtn = append(rtn, "delete_ban")
-	} else if user.Role == structs.UnDeleterRole && post.DeletedAt.Valid {
-		rtn = append(rtn, "unban")
+	} else if (timestamp-post.CreatedAt.Unix() <= 172800) && user.Role == structs.UnDeleterRole && post.DeletedAt.Valid {
 		rtn = append(rtn, "undelete_unban")
 	}
 
 	return rtn
 }
 
-func GetPermissionsByComment(user structs.User, comment structs.Comment) []string {
-	return getPermissions(user, structs.Post{
+func GetPermissionsByComment(user *structs.User, comment *structs.Comment) []string {
+	return getPermissions(user, &structs.Post{
 		DeletedAt: comment.DeletedAt,
 		CreatedAt: comment.CreatedAt,
 		UserID:    comment.UserID,
 	}, true)
 }
 
-func GetReportWeight(user structs.User) int32 {
+func GetReportWeight(user *structs.User) int32 {
 	return 10
 }
 
-func NeedLimiter(user structs.User) bool {
+func NeedLimiter(user *structs.User) bool {
 	return user.Role == structs.NormalUserRole || user.Role == structs.DeleterRole || user.Role == structs.UnDeleterRole
 }
 
-func CanViewDeletedPost(user structs.User) bool {
+func CanViewDeletedPost(user *structs.User) bool {
 	return user.Role == structs.AdminRole || user.Role == structs.UnDeleterRole ||
 		user.Role == structs.SuperUserRole
 }
 
-func CanOverrideBan(user structs.User) bool {
-	return user.Role == structs.SuperUserRole || user.Role == structs.AdminRole
+func GetDeletePostRateLimitIn24h(userRole structs.UserRole) int64 {
+	switch userRole {
+	case structs.SuperUserRole:
+		return 10000
+	case structs.AdminRole:
+		return 20
+	case structs.DeleterRole:
+		return 5
+	default:
+		return 0
+	}
 }
 
-func CanViewStatistics(user structs.User) bool {
-	return user.Role == structs.SuperUserRole || user.Role == structs.AdminRole
-}
-
-func CanViewAllSystemMessages(user structs.User) bool {
-	return user.Role == structs.SuperUserRole || user.Role == structs.AdminRole
-}
-
-func CanViewReports(user structs.User) bool {
+func CanOverrideBan(user *structs.User) bool {
 	return user.Role == structs.AdminRole || user.Role == structs.DeleterRole || user.Role == structs.UnDeleterRole ||
 		user.Role == structs.SuperUserRole
 }
 
-func CanViewLogs(user structs.User) bool {
+func CanViewStatistics(user *structs.User) bool {
+	return user.Role == structs.SuperUserRole || user.Role == structs.AdminRole
+}
+
+func CanViewAllSystemMessages(user *structs.User) bool {
+	return user.Role == structs.SuperUserRole || user.Role == structs.AdminRole
+}
+
+func CanViewReports(user *structs.User) bool {
+	return user.Role == structs.AdminRole || user.Role == structs.DeleterRole || user.Role == structs.UnDeleterRole ||
+		user.Role == structs.SuperUserRole
+}
+
+func CanViewLogs(user *structs.User) bool {
 	return user.Role == structs.SuperUserRole
 }
 
-func CanShowHelp(user structs.User) bool {
+func CanShowHelp(user *structs.User) bool {
 	return user.Role == structs.AdminRole || user.Role == structs.DeleterRole || user.Role == structs.UnDeleterRole ||
 		user.Role == structs.SuperUserRole
 }
 
-func CanShutdown(user structs.User) bool {
+func CanShutdown(user *structs.User) bool {
 	return user.Role == structs.SuperUserRole
 }

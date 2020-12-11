@@ -25,36 +25,41 @@ var commentLimiter2 *limiter.Limiter
 var detailPostLimiter *limiter.Limiter
 var doAttentionLimiter *limiter.Limiter
 var searchLimiter *limiter.Limiter
+var deleteBanLimiter *limiter.Limiter
 
 func initLimiters() {
-	postLimiter = utils.InitLimiter(limiter.Rate{
+	postLimiter = db.InitLimiter(limiter.Rate{
 		Period: 20 * time.Second,
 		Limit:  1,
 	}, "postLimiter")
-	postLimiter2 = utils.InitLimiter(limiter.Rate{
+	postLimiter2 = db.InitLimiter(limiter.Rate{
 		Period: 24 * time.Hour,
 		Limit:  100,
 	}, "postLimiter2")
-	commentLimiter = utils.InitLimiter(limiter.Rate{
+	commentLimiter = db.InitLimiter(limiter.Rate{
 		Period: 10 * time.Second,
 		Limit:  1,
 	}, "commentLimiter")
-	commentLimiter2 = utils.InitLimiter(limiter.Rate{
+	commentLimiter2 = db.InitLimiter(limiter.Rate{
 		Period: 24 * time.Hour,
 		Limit:  500,
 	}, "commentLimiter2")
-	detailPostLimiter = utils.InitLimiter(limiter.Rate{
+	detailPostLimiter = db.InitLimiter(limiter.Rate{
 		Period: 24 * time.Hour,
 		Limit:  8000,
 	}, "detailPostLimiter")
-	searchLimiter = utils.InitLimiter(limiter.Rate{
+	searchLimiter = db.InitLimiter(limiter.Rate{
 		Period: 24 * time.Hour,
 		Limit:  1000,
 	}, "searchLimiter")
-	doAttentionLimiter = utils.InitLimiter(limiter.Rate{
+	doAttentionLimiter = db.InitLimiter(limiter.Rate{
 		Period: 24 * time.Hour,
 		Limit:  2000,
 	}, "doAttentionLimiter")
+	deleteBanLimiter = db.InitLimiter(limiter.Rate{
+		Period: 24 * time.Hour,
+		Limit:  permissions.GetDeletePostRateLimitIn24h(structs.SuperUserRole),
+	}, "deleteBanLimiter")
 }
 
 func limiterMiddleware(limiter *limiter.Limiter, msg string, doLog bool) gin.HandlerFunc {
@@ -62,7 +67,7 @@ func limiterMiddleware(limiter *limiter.Limiter, msg string, doLog bool) gin.Han
 		user := c.MustGet("user").(structs.User)
 		uidStr := strconv.Itoa(int(user.ID))
 
-		if permissions.NeedLimiter(user) {
+		if permissions.NeedLimiter(&user) {
 			context, err6 := limiter.Get(c, uidStr)
 			if err6 != nil {
 				c.AbortWithStatus(500)
@@ -152,7 +157,7 @@ func httpReturnInfo(c *gin.Context, text string) {
 func disallowBannedPostUsers() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user := c.MustGet("user").(structs.User)
-		if !permissions.CanOverrideBan(user) {
+		if !permissions.CanOverrideBan(&user) {
 			timestamp := utils.GetTimeStamp()
 			var ban structs.Ban
 			err := db.GetDb(false).Model(&structs.Ban{}).Where("user_id = ? and expire_at > ?", user.ID, timestamp).
@@ -251,7 +256,7 @@ func searchHotPosts() gin.HandlerFunc {
 				utils.HttpReturnWithCodeOneAndAbort(c, "数据库读取失败，请联系管理员")
 				return
 			}
-			rtn := postsToJson(posts, user, attentionPids)
+			rtn := postsToJson(posts, &user, attentionPids)
 			c.JSON(http.StatusOK, gin.H{
 				"code": 0,
 				"data": utils.IfThenElse(rtn != nil, rtn, []string{}),
@@ -284,7 +289,7 @@ func checkParameterPage(maxPage int) gin.HandlerFunc {
 
 func preprocessReportPost(c *gin.Context) {
 	user := c.MustGet("user").(structs.User)
-	canViewDelete := permissions.CanViewDeletedPost(user)
+	canViewDelete := permissions.CanViewDeletedPost(&user)
 	reason := c.PostForm("reason")
 	typ := c.PostForm("type")
 	id := c.MustGet("id").(int)
@@ -296,7 +301,7 @@ func preprocessReportPost(c *gin.Context) {
 	}
 	c.Set("post", post)
 
-	userPermissions := permissions.GetPermissionsByPost(user, post)
+	userPermissions := permissions.GetPermissionsByPost(&user, &post)
 	if _, ok := utils.ContainsString(userPermissions, typ); !ok {
 		utils.HttpReturnWithCodeOneAndAbort(c, "操作失败，权限不足")
 		return
@@ -326,15 +331,16 @@ func preprocessReportPost(c *gin.Context) {
 		Reason:         reason,
 		Type:           reportType,
 		IsComment:      false,
-		Weight:         permissions.GetReportWeight(user),
+		Weight:         permissions.GetReportWeight(&user),
 	}
 	c.Set("report", report)
+	c.Set("user", user)
 	c.Next()
 }
 
 func preprocessReportComment(c *gin.Context) {
 	user := c.MustGet("user").(structs.User)
-	canViewDelete := permissions.CanViewDeletedPost(user)
+	canViewDelete := permissions.CanViewDeletedPost(&user)
 	reason := c.PostForm("reason")
 	typ := c.PostForm("type")
 	id := c.MustGet("id").(int)
@@ -346,7 +352,7 @@ func preprocessReportComment(c *gin.Context) {
 	}
 	c.Set("comment", comment)
 
-	userPermissions := permissions.GetPermissionsByComment(user, comment)
+	userPermissions := permissions.GetPermissionsByComment(&user, &comment)
 	if _, ok := utils.ContainsString(userPermissions, typ); !ok {
 		utils.HttpReturnWithCodeOneAndAbort(c, "操作失败，权限不足")
 		return
@@ -376,8 +382,9 @@ func preprocessReportComment(c *gin.Context) {
 		Reason:         reason,
 		Type:           reportType,
 		IsComment:      true,
-		Weight:         permissions.GetReportWeight(user),
+		Weight:         permissions.GetReportWeight(&user),
 	}
 	c.Set("report", report)
+	c.Set("user", user)
 	c.Next()
 }

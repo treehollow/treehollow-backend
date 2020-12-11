@@ -1,6 +1,7 @@
 package route
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
@@ -17,22 +18,22 @@ func adminHelpCommand() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user := c.MustGet("user").(structs.User)
 		keywords := c.Query("keywords")
-		if permissions.CanShowHelp(user) && keywords == "help" {
+		if permissions.CanShowHelp(&user) && keywords == "help" {
 			info := ""
-			if permissions.CanViewStatistics(user) {
+			if permissions.CanViewStatistics(&user) {
 				info += "`stats`: 查看树洞统计信息\n"
 			}
-			if permissions.CanViewDeletedPost(user) {
+			if permissions.CanViewDeletedPost(&user) {
 				info += "`dels`: 搜索所有被管理员删除的树洞和回复(包括删除后恢复的)\n"
 				info += "`//setflag NOT_SHOW_DELETED=on`(注意大小写): 在除了`deleted`搜索界面外的其他界面隐藏被删除的树洞\n"
 			}
-			if permissions.CanViewAllSystemMessages(user) {
+			if permissions.CanViewAllSystemMessages(&user) {
 				info += "`msgs`: 查看所有用户收到的系统消息\n"
 			}
-			if permissions.CanViewReports(user) {
+			if permissions.CanViewReports(&user) {
 				info += "`rep_dels`: 查看所有用户的【删除举报】(树洞or回复)\n"
 			}
-			if permissions.CanViewLogs(user) {
+			if permissions.CanViewLogs(&user) {
 				info += "`rep_recalls`: 查看所有用户的【撤回】(树洞or回复)\n"
 				info += "`rep_folds`: 查看所有用户的【折叠举报】(树洞or回复)\n"
 				info += "`log_tags`: 查看所有【管理员打Tag】的操作日志\n"
@@ -40,9 +41,26 @@ func adminHelpCommand() gin.HandlerFunc {
 				info += "`log_unbans`: 查看所有【撤销删除】、【解禁】的操作日志\n"
 				info += "`logs`: 查看所有举报、删帖、打tag的操作日志\n"
 			}
-			if permissions.CanShutdown(user) {
+			if permissions.CanShutdown(&user) {
 				info += "`shutdown`: 关闭树洞, 请谨慎使用此命令\n"
 			}
+
+			if permissions.GetDeletePostRateLimitIn24h(user.Role) > 0 {
+				uidStr := strconv.Itoa(int(user.ID))
+				ctx, err := deleteBanLimiter.Peek(c, uidStr)
+				if err != nil {
+					log.Printf("deleteBanLimiter peek failed. err=%s\n", err)
+					utils.HttpReturnWithCodeOneAndAbort(c, "数据库读取失败，请联系管理员")
+					return
+				}
+				limit := permissions.GetDeletePostRateLimitIn24h(user.Role)
+
+				info += "\n---\n"
+				info += fmt.Sprintf("您的【删帖禁言】操作次数额度剩余（24h内）：%d/%d\n",
+					limit+ctx.Remaining-ctx.Limit,
+					limit)
+			}
+
 			httpReturnInfo(c, info)
 			return
 		}
@@ -54,7 +72,7 @@ func adminStatisticsCommand() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user := c.MustGet("user").(structs.User)
 		keywords := c.Query("keywords")
-		if permissions.CanViewStatistics(user) && keywords == "stats" {
+		if permissions.CanViewStatistics(&user) && keywords == "stats" {
 			var count int64
 			err := db.GetDb(true).Model(&structs.User{}).Count(&count).Error
 			info := ""
@@ -96,7 +114,7 @@ func adminReportsCommand() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user := c.MustGet("user").(structs.User)
 		keywords := c.Query("keywords")
-		if permissions.CanViewReports(user) && keywords == "rep_dels" {
+		if permissions.CanViewReports(&user) && keywords == "rep_dels" {
 			page := c.MustGet("page").(int)
 			pageSize := c.MustGet("page_size").(int)
 			offset := (page - 1) * pageSize
@@ -133,7 +151,7 @@ func adminLogsCommand() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user := c.MustGet("user").(structs.User)
 		keywords := c.Query("keywords")
-		if permissions.CanViewLogs(user) {
+		if permissions.CanViewLogs(&user) {
 			if _, ok := utils.ContainsString([]string{"logs", "rep_dels", "rep_folds", "log_tags", "log_dels",
 				"rep_recalls", "log_unbans"}, keywords); ok {
 
@@ -197,7 +215,7 @@ func adminSysMsgsCommand() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user := c.MustGet("user").(structs.User)
 		keywords := c.Query("keywords")
-		if permissions.CanViewAllSystemMessages(user) && keywords == "msgs" {
+		if permissions.CanViewAllSystemMessages(&user) && keywords == "msgs" {
 			page := c.MustGet("page").(int)
 			pageSize := c.MustGet("page_size").(int)
 			offset := (page - 1) * pageSize
@@ -234,7 +252,7 @@ func adminShutdownCommand() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user := c.MustGet("user").(structs.User)
 		keywords := c.Query("keywords")
-		if permissions.CanShutdown(user) && keywords == "shutdown" {
+		if permissions.CanShutdown(&user) && keywords == "shutdown" {
 			log.Printf("Super user " + user.EmailHash + " shutdown. shutdownCountDown=" + strconv.Itoa(shutdownCountDown))
 			if shutdownCountDown > 0 {
 				httpReturnInfo(c, strconv.Itoa(shutdownCountDown)+" more times to fully shutdown.")

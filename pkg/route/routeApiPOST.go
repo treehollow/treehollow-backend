@@ -101,7 +101,7 @@ func sendComment(c *gin.Context) {
 	}
 
 	user := c.MustGet("user").(structs.User)
-	canViewDelete := permissions.CanViewDeletedPost(user)
+	canViewDelete := permissions.CanViewDeletedPost(&user)
 
 	var post structs.Post
 	err = db.GetDb(canViewDelete).First(&post, int32(pid)).Error
@@ -205,6 +205,7 @@ func getPostOrCommentText(c *gin.Context, isComment bool) string {
 
 func handleReport(c *gin.Context) {
 	report := c.MustGet("report").(structs.Report)
+	user := c.MustGet("user").(structs.User)
 	err := db.GetDb(false).Create(&report).Error
 	if err == nil {
 		switch report.Type {
@@ -240,7 +241,17 @@ func handleReport(c *gin.Context) {
 		case structs.AdminTag:
 			err = db.SetTagByReport(report)
 		case structs.AdminDeleteAndBan:
+			uidStr := strconv.Itoa(int(user.ID))
+			ctx, _ := deleteBanLimiter.Peek(c, uidStr)
+			limit := permissions.GetDeletePostRateLimitIn24h(user.Role)
+			if ctx.Limit-ctx.Remaining >= limit {
+				utils.HttpReturnWithCodeOne(c, "您的24h内的删帖数量已经达到系统限制")
+				return
+			}
 			err = db.DeleteAndBan(report, utils.TrimText(getPostOrCommentText(c, report.IsComment), 20))
+			if err == nil {
+				_, _ = deleteBanLimiter.Get(c, uidStr)
+			}
 		case structs.AdminUndelete:
 			_ = db.UnbanByReport(report)
 			if report.IsComment {
@@ -272,7 +283,7 @@ func handleReport(c *gin.Context) {
 
 func editAttention(c *gin.Context) {
 	user := c.MustGet("user").(structs.User)
-	canViewDelete := permissions.CanViewDeletedPost(user)
+	canViewDelete := permissions.CanViewDeletedPost(&user)
 
 	pid, err := strconv.Atoi(c.PostForm("pid"))
 	if err != nil {
@@ -313,6 +324,6 @@ func editAttention(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"code": 0,
-		"data": postToJson(post, user, isAttention == 0),
+		"data": postToJson(&post, &user, isAttention == 0),
 	})
 }

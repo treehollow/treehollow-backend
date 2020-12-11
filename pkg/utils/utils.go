@@ -9,12 +9,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	libredis "github.com/go-redis/redis/v8"
 	"github.com/oschwald/geoip2-golang"
 	"github.com/sigurn/crc8"
 	"github.com/spf13/viper"
-	"github.com/ulule/limiter/v3"
-	sredis "github.com/ulule/limiter/v3/drivers/store/redis"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -148,23 +145,6 @@ func GetHashedFilePath(filePath string) string {
 		return filePath[:2] + "/" + filePath
 	}
 	return filePath
-}
-
-func InitLimiter(rate limiter.Rate, prefix string) *limiter.Limiter {
-	option, err := libredis.ParseURL(viper.GetString("redis_source"))
-	if err != nil {
-		FatalErrorHandle(&err, "failed init redis url")
-		return nil
-	}
-	client := libredis.NewClient(option)
-	store, err2 := sredis.NewStoreWithOptions(client, limiter.StoreOptions{
-		Prefix: prefix,
-	})
-	if err2 != nil {
-		FatalErrorHandle(&err2, "failed init redis store")
-		return nil
-	}
-	return limiter.New(store, rate)
 }
 
 func SaveImage(base64img string, imgPath string) ([]byte, string, error) {

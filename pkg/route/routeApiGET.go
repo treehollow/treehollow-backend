@@ -15,7 +15,7 @@ import (
 	"unicode/utf8"
 )
 
-func commentToJson(comment structs.Comment, user structs.User) gin.H {
+func commentToJson(comment *structs.Comment, user *structs.User) gin.H {
 	offset := utils.CalcExtra(user.EmailHash, strconv.Itoa(int(comment.ID)))
 	return gin.H{
 		"cid":         comment.ID,
@@ -31,10 +31,10 @@ func commentToJson(comment structs.Comment, user structs.User) gin.H {
 	}
 }
 
-func commentsToJson(comments []structs.Comment, user structs.User) []gin.H {
+func commentsToJson(comments []structs.Comment, user *structs.User) []gin.H {
 	var data []gin.H
 	for _, comment := range comments {
-		data = append(data, commentToJson(comment, user))
+		data = append(data, commentToJson(&comment, user))
 	}
 	return data
 }
@@ -47,7 +47,7 @@ func detailPost(c *gin.Context) {
 	}
 
 	user := c.MustGet("user").(structs.User)
-	canViewDelete := permissions.CanViewDeletedPost(user)
+	canViewDelete := permissions.CanViewDeletedPost(&user)
 
 	var post structs.Post
 	err3 := db.GetDb(canViewDelete).First(&post, int32(pid)).Error
@@ -65,18 +65,18 @@ func detailPost(c *gin.Context) {
 		utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
 		return
 	} else {
-		data := commentsToJson(comments, user)
+		data := commentsToJson(comments, &user)
 		post.ReplyNum = int32(len(comments))
 		c.JSON(http.StatusOK, gin.H{
 			"code": 0,
 			"data": utils.IfThenElse(data != nil, data, []string{}),
-			"post": postToJson(post, user, attention == 1),
+			"post": postToJson(&post, &user, attention == 1),
 		})
 		return
 	}
 }
 
-func postToJson(post structs.Post, user structs.User, attention bool) gin.H {
+func postToJson(post *structs.Post, user *structs.User, attention bool) gin.H {
 	offset := utils.CalcExtra(user.EmailHash, strconv.Itoa(int(post.ID)))
 	tag := post.Tag
 	if post.ReportNum >= 3 && !post.DeletedAt.Valid && tag == "" {
@@ -98,11 +98,11 @@ func postToJson(post structs.Post, user structs.User, attention bool) gin.H {
 	}
 }
 
-func postsToJson(posts []structs.Post, user structs.User, attentionPids []int32) []gin.H {
+func postsToJson(posts []structs.Post, user *structs.User, attentionPids []int32) []gin.H {
 	var data []gin.H
 	pidsSet := utils.Int32SliceToSet(attentionPids)
 	for _, post := range posts {
-		data = append(data, postToJson(post, user, utils.Int32IsInSet(post.ID, pidsSet)))
+		data = append(data, postToJson(&post, user, utils.Int32IsInSet(post.ID, pidsSet)))
 	}
 	return data
 }
@@ -119,7 +119,7 @@ func getAttentionPidsInPosts(user structs.User, posts []structs.Post) (attention
 
 func listPost(c *gin.Context) {
 	user := c.MustGet("user").(structs.User)
-	canViewDelete := permissions.CanViewDeletedPost(user)
+	canViewDelete := permissions.CanViewDeletedPost(&user)
 	page := c.MustGet("page").(int)
 	posts, err2 := db.ListPosts(page, user)
 	if err2 != nil {
@@ -152,7 +152,7 @@ func listPost(c *gin.Context) {
 		utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
 		return
 	}
-	jsPosts := postsToJson(posts, user, attentionPids)
+	jsPosts := postsToJson(posts, &user, attentionPids)
 
 	c.JSON(http.StatusOK, gin.H{
 		"code":   0,
@@ -189,7 +189,7 @@ func searchPost(c *gin.Context) {
 		utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
 		return
 	}
-	jsPosts := postsToJson(posts, user, attentionPids)
+	jsPosts := postsToJson(posts, &user, attentionPids)
 
 	c.JSON(http.StatusOK, gin.H{
 		"code": 0,
@@ -204,7 +204,7 @@ func searchAttentionPost(c *gin.Context) {
 	page := c.MustGet("page").(int)
 	pageSize := c.MustGet("page_size").(int)
 	user := c.MustGet("user").(structs.User)
-	canViewDelete := permissions.CanViewDeletedPost(user)
+	canViewDelete := permissions.CanViewDeletedPost(&user)
 	keywords := c.Query("keywords")
 
 	if utf8.RuneCountInString(keywords) > consts.SearchMaxLength {
@@ -228,7 +228,7 @@ func searchAttentionPost(c *gin.Context) {
 		utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
 		return
 	}
-	jsPosts := postsToJson(posts, user, attentionPids)
+	jsPosts := postsToJson(posts, &user, attentionPids)
 
 	c.JSON(http.StatusOK, gin.H{
 		"code": 0,
@@ -243,7 +243,7 @@ func attentionPosts(c *gin.Context) {
 	page := c.MustGet("page").(int)
 
 	user := c.MustGet("user").(structs.User)
-	canViewDelete := permissions.CanViewDeletedPost(user)
+	canViewDelete := permissions.CanViewDeletedPost(&user)
 	offset := (page - 1) * consts.PageSize
 	limit := consts.PageSize
 
@@ -264,7 +264,7 @@ func attentionPosts(c *gin.Context) {
 		utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
 		return
 	} else {
-		data := postsToJson(posts, user, attentionPids)
+		data := postsToJson(posts, &user, attentionPids)
 		c.JSON(http.StatusOK, gin.H{
 			"code": 0,
 			"data": utils.IfThenElse(data != nil, data, []string{}),

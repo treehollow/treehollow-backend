@@ -226,7 +226,7 @@ func LoginApiListenHttp() {
 	r := gin.Default()
 	r.Use(cors.Default())
 
-	emailLimiter = utils.InitLimiter(limiter.Rate{
+	emailLimiter = db.InitLimiter(limiter.Rate{
 		Period: 24 * time.Hour,
 		Limit:  viper.GetInt64("max_email_per_ip_per_day"),
 	}, "emailLimiter")
