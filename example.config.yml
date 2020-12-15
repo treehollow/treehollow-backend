@@ -21,7 +21,7 @@ is_debug: true
 
 ### 当is_debug=false时，用户邮箱在数据库中会通过一个盐被单向加密。
 ### 为了安全，这个盐的明文不会存储到硬盘上，而是每次启动树洞登录服务程序时需要手动输入，这里需要填写盐的sha256哈希以避免输错。
-### 获取sha256的方法：echo "YOUR_SALT" | sha256sum
+### 获取sha256的方法：https://thuhole.github.io/online-tools/sha256.html
 salt_hashed: d83f8dd178b6db458f6a2b5782a5758dd4250550e7f73bcd4ac963bebf967939
 
 ### 树洞内容服务的监听端口和登录服务的监听端口。这两个端口和程序分开的。
