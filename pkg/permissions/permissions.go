@@ -65,7 +65,7 @@ func GetDeletePostRateLimitIn24h(userRole structs.UserRole) int64 {
 	case structs.AdminRole:
 		return 20
 	case structs.DeleterRole:
-		return 5
+		return 20
 	default:
 		return 0
 	}
