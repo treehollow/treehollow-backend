@@ -9,6 +9,10 @@ func GetPermissionsByPost(user *structs.User, post *structs.Post) []string {
 	return getPermissions(user, post, false)
 }
 
+func isDeleter(role structs.UserRole) bool {
+	return role == structs.DeleterRole || role == structs.Deleter2Role
+}
+
 func getPermissions(user *structs.User, post *structs.Post, isComment bool) []string {
 	rtn := []string{"report"}
 	if !isComment {
@@ -28,7 +32,7 @@ func getPermissions(user *structs.User, post *structs.Post, isComment bool) []st
 		} else {
 			rtn = append(rtn, "delete_ban")
 		}
-	} else if (timestamp-post.CreatedAt.Unix() <= 172800) && user.Role == structs.DeleterRole && !post.DeletedAt.Valid {
+	} else if (timestamp-post.CreatedAt.Unix() <= 172800) && isDeleter(user.Role) && !post.DeletedAt.Valid {
 		rtn = append(rtn, "delete_ban")
 	} else if (timestamp-post.CreatedAt.Unix() <= 172800) && user.Role == structs.UnDeleterRole && post.DeletedAt.Valid {
 		rtn = append(rtn, "undelete_unban")
@@ -50,7 +54,7 @@ func GetReportWeight(user *structs.User) int32 {
 }
 
 func NeedLimiter(user *structs.User) bool {
-	return user.Role == structs.NormalUserRole || user.Role == structs.DeleterRole || user.Role == structs.UnDeleterRole
+	return user.Role == structs.NormalUserRole || isDeleter(user.Role) || user.Role == structs.UnDeleterRole
 }
 
 func CanViewDeletedPost(user *structs.User) bool {
@@ -66,13 +70,15 @@ func GetDeletePostRateLimitIn24h(userRole structs.UserRole) int64 {
 		return 20
 	case structs.DeleterRole:
 		return 20
+	case structs.Deleter2Role:
+		return 0
 	default:
 		return 0
 	}
 }
 
 func CanOverrideBan(user *structs.User) bool {
-	return user.Role == structs.AdminRole || user.Role == structs.DeleterRole || user.Role == structs.UnDeleterRole ||
+	return user.Role == structs.AdminRole || isDeleter(user.Role) || user.Role == structs.UnDeleterRole ||
 		user.Role == structs.SuperUserRole
 }
 
@@ -85,7 +91,7 @@ func CanViewAllSystemMessages(user *structs.User) bool {
 }
 
 func CanViewReports(user *structs.User) bool {
-	return user.Role == structs.AdminRole || user.Role == structs.DeleterRole || user.Role == structs.UnDeleterRole ||
+	return user.Role == structs.AdminRole || isDeleter(user.Role) || user.Role == structs.UnDeleterRole ||
 		user.Role == structs.SuperUserRole
 }
 
@@ -94,7 +100,7 @@ func CanViewLogs(user *structs.User) bool {
 }
 
 func CanShowHelp(user *structs.User) bool {
-	return user.Role == structs.AdminRole || user.Role == structs.DeleterRole || user.Role == structs.UnDeleterRole ||
+	return user.Role == structs.AdminRole || isDeleter(user.Role) || user.Role == structs.UnDeleterRole ||
 		user.Role == structs.SuperUserRole
 }
 

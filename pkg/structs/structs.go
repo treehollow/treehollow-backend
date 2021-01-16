@@ -15,6 +15,7 @@ const (
 	AdminRole                 = 1
 	DeleterRole               = 2
 	UnDeleterRole             = 3
+	Deleter2Role              = 20
 	NormalUserRole            = 50
 	UnregisteredRole          = 100
 )
