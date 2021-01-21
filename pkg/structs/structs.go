@@ -16,6 +16,7 @@ const (
 	DeleterRole               = 2
 	UnDeleterRole             = 3
 	Deleter2Role              = 20
+	Deleter3Role              = 21
 	NormalUserRole            = 50
 	UnregisteredRole          = 100
 )

@@ -10,7 +10,7 @@ func GetPermissionsByPost(user *structs.User, post *structs.Post) []string {
 }
 
 func isDeleter(role structs.UserRole) bool {
-	return role == structs.DeleterRole || role == structs.Deleter2Role
+	return role == structs.DeleterRole || role == structs.Deleter2Role || role == structs.Deleter3Role
 }
 
 func getPermissions(user *structs.User, post *structs.Post, isComment bool) []string {
@@ -71,6 +71,8 @@ func GetDeletePostRateLimitIn24h(userRole structs.UserRole) int64 {
 	case structs.DeleterRole:
 		return 20
 	case structs.Deleter2Role:
+		return 5
+	case structs.Deleter3Role:
 		return 0
 	default:
 		return 0
