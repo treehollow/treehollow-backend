@@ -2,6 +2,8 @@ package structs
 
 import (
 	"gorm.io/gorm"
+	"math"
+	"strconv"
 	"thuhole-go-backend/pkg/utils"
 )
 
@@ -51,12 +53,16 @@ func (report *Report) AfterCreate(tx *gorm.DB) (err error) {
 	return
 }
 
+func calcReportedTimes(ban *Ban) string {
+	return strconv.Itoa(int(math.Round(float64(ban.ExpireAt-ban.CreatedAt.Unix()) / 86400.0)))
+}
+
 func (ban *Ban) AfterCreate(tx *gorm.DB) (err error) {
 	err = tx.Create(&SystemMessage{
 		UserID: ban.UserID,
 		BanID:  ban.ID,
 		Title:  "封禁提示",
-		Text:   ban.Reason + "\n\n在" + utils.TimestampToString(ban.ExpireAt) + "之前您将无法发布树洞。",
+		Text:   ban.Reason + "\n\n这是您第" + calcReportedTimes(ban) + "次被举报，在" + utils.TimestampToString(ban.ExpireAt) + "之前您将无法发布树洞。",
 	}).Error
 	return
 }
