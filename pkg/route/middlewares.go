@@ -25,6 +25,7 @@ var commentLimiter2 *limiter.Limiter
 var detailPostLimiter *limiter.Limiter
 var doAttentionLimiter *limiter.Limiter
 var searchLimiter *limiter.Limiter
+var searchShortTimeLimiter *limiter.Limiter
 var deleteBanLimiter *limiter.Limiter
 
 func initLimiters() {
@@ -48,6 +49,10 @@ func initLimiters() {
 		Period: 24 * time.Hour,
 		Limit:  8000,
 	}, "detailPostLimiter")
+	searchShortTimeLimiter = db.InitLimiter(limiter.Rate{
+		Period: 2 * time.Second,
+		Limit:  1,
+	}, "searchShortTimeLimiter")
 	searchLimiter = db.InitLimiter(limiter.Rate{
 		Period: 24 * time.Hour,
 		Limit:  1000,

@@ -30,8 +30,9 @@ func ServicesApiListenHttp() {
 		limiterMiddleware(detailPostLimiter, "你今天刷了太多树洞了，明天再来吧", true),
 		detailPost)
 	r.GET("/contents/search",
-		limiterMiddleware(searchLimiter, "你今天搜索太多树洞了，明天再来吧", true),
 		checkParameterPage(consts.SearchMaxPage),
+		limiterMiddleware(searchShortTimeLimiter, "请不要短时间内连续搜索树洞", false),
+		limiterMiddleware(searchLimiter, "你今天搜索太多树洞了，明天再来吧", true),
 		checkParameterPageSize(),
 		searchHotPosts(),
 		adminHelpCommand(),
@@ -48,6 +49,7 @@ func ServicesApiListenHttp() {
 	r.GET("/contents/search/attentions",
 		disallowUnregisteredUsers(),
 		checkParameterPage(consts.SearchMaxPage),
+		limiterMiddleware(searchShortTimeLimiter, "请不要短时间内连续搜索树洞", false),
 		limiterMiddleware(searchLimiter, "你今天搜索太多树洞了，明天再来吧", true),
 		checkParameterPageSize(),
 		searchAttentionPost)
