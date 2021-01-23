@@ -32,7 +32,7 @@ func InitDb() {
 	newLogger := logger.New(
 		log.New(mw, "\r\n", log.LstdFlags), // io writer
 		logger.Config{
-			SlowThreshold: time.Millisecond * 200, // Slow SQL threshold
+			SlowThreshold: time.Millisecond * 500, // Slow SQL threshold
 			LogLevel:      logLevel,               // Log level
 			Colorful:      false,
 		},
