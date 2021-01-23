@@ -193,6 +193,9 @@ func generateBanReason(report structs.Report, originalText string) (rtn string) 
 func DeleteByReport(report structs.Report) (err error) {
 	if report.IsComment {
 		err = db.Where("id = ?", report.CommentID).Delete(&structs.Comment{}).Error
+		if err == nil {
+			err = db.Model(&structs.Post{}).Where("id = ?", report.PostID).Update("reply_num", gorm.Expr("reply_num - 1")).Error
+		}
 	} else {
 		err = db.Where("id = ?", report.PostID).Delete(&structs.Post{}).Error
 	}
@@ -218,6 +221,9 @@ func DeleteAndBan(report structs.Report, text string) (err error) {
 func SetTagByReport(report structs.Report) (err error) {
 	if report.IsComment {
 		err = db.Model(&structs.Comment{}).Where("id = ?", report.CommentID).Update("tag", report.Reason).Error
+		if err == nil {
+			err = db.Model(&structs.Post{}).Where("id = ?", report.PostID).Update("updated_at", time.Now()).Error
+		}
 	} else {
 		err = db.Model(&structs.Post{}).Where("id = ?", report.PostID).Update("tag", report.Reason).Error
 	}

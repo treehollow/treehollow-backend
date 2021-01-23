@@ -25,7 +25,7 @@ func (comment *Comment) AfterCreate(tx *gorm.DB) (err error) {
 		err = tx.Create(&Attention{UserID: comment.UserID, PostID: comment.PostID}).Error
 	}
 	if err == nil {
-		err = tx.Model(&Post{ID: comment.PostID}).
+		err = tx.Model(&Post{}).Where("id = ?", comment.PostID).
 			Update("reply_num", gorm.Expr("reply_num + 1")).Error
 	}
 	return
