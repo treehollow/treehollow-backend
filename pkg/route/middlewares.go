@@ -93,8 +93,7 @@ func limiterMiddleware(limiter *limiter.Limiter, msg string, doLog bool) gin.Han
 func authMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := c.Query("user_token")
-		var user structs.User
-		err := db.GetDb(false).Where("token = ?", token).First(&user).Error
+		user, err := db.GetUserWithCache(token)
 		if err != nil {
 			fmt.Println(err.Error())
 			if err.Error() != "record not found" {

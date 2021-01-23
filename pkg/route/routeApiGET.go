@@ -12,6 +12,7 @@ import (
 	"thuhole-go-backend/pkg/permissions"
 	"thuhole-go-backend/pkg/structs"
 	"thuhole-go-backend/pkg/utils"
+	"time"
 	"unicode/utf8"
 )
 
@@ -34,7 +35,9 @@ func commentToJson(comment *structs.Comment, user *structs.User) gin.H {
 func commentsToJson(comments []structs.Comment, user *structs.User) []gin.H {
 	var data []gin.H
 	for _, comment := range comments {
-		data = append(data, commentToJson(&comment, user))
+		if !comment.DeletedAt.Valid || permissions.CanViewDeletedPost(user) {
+			data = append(data, commentToJson(&comment, user))
+		}
 	}
 	return data
 }
@@ -58,15 +61,14 @@ func detailPost(c *gin.Context) {
 	var attention int64
 	_ = db.GetDb(false).Model(&structs.Attention{}).Where(&structs.Attention{PostID: post.ID, UserID: user.ID}).Count(&attention).Error
 
-	var comments []structs.Comment
-	err2 := db.GetDb(canViewDelete).Where("post_id = ?", int32(pid)).Order("id asc").Find(&comments).Error
+	comments, err2 := db.GetCommentsWithCache(&post, time.Now())
 	if err2 != nil {
 		log.Printf("dbGetSavedComments failed: %s\n", err2)
 		utils.HttpReturnWithCodeOne(c, "数据库读取失败，请联系管理员")
 		return
 	} else {
 		data := commentsToJson(comments, &user)
-		post.ReplyNum = int32(len(comments))
+		post.ReplyNum = int32(len(data))
 		c.JSON(http.StatusOK, gin.H{
 			"code": 0,
 			"data": utils.IfThenElse(data != nil, data, []string{}),

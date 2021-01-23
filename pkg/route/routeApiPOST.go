@@ -285,6 +285,7 @@ func handleReport(c *gin.Context) {
 			if report.IsComment {
 				err = db.GetDb(false).Model(&structs.Comment{}).
 					Where("id = ?", report.CommentID).Update("deleted_at", nil).Error
+				db.DelCommentCache(int(report.PostID))
 			} else {
 				err = db.GetDb(false).Model(&structs.Post{}).
 					Where("id = ?", report.PostID).Update("deleted_at", nil).Error

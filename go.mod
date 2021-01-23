@@ -16,7 +16,7 @@ require (
 	github.com/mitchellh/mapstructure v1.4.1 // indirect
 	github.com/oschwald/geoip2-golang v1.4.0
 	github.com/oschwald/maxminddb-golang v1.8.0 // indirect
-	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
+	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pelletier/go-toml v1.8.1 // indirect
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/sigurn/crc8 v0.0.0-20160107002456-e55481d6f45c

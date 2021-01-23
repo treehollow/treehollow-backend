@@ -21,6 +21,7 @@ var db *gorm.DB
 
 func InitDb() {
 	_ = initRedis()
+	initCache()
 
 	logFile, err := os.OpenFile("sql.log", os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
 	utils.FatalErrorHandle(&err, "error init sql log file")
@@ -63,6 +64,12 @@ func ListPosts(p int, user structs.User) (posts []structs.Post, err error) {
 		err = tx.Where("id not in ?", pinnedPids).Order("id desc").Limit(limit).Offset(offset).Find(&posts).Error
 	}
 	return
+}
+
+func GetComments(pid int32) ([]structs.Comment, error) {
+	var comments []structs.Comment
+	err := db.Unscoped().Where("post_id = ?", pid).Order("id asc").Find(&comments).Error
+	return comments, err
 }
 
 func SearchPosts(p int, pageSize int, keywords string, limitPids []int32, user structs.User) (posts []structs.Post, err error) {
@@ -139,6 +146,7 @@ func SaveComment(uid int32, text string, tag string, typ string, filePath string
 	comment := structs.Comment{Tag: tag, UserID: uid, PostID: pid, Text: text, Type: typ, FilePath: filePath, Name: name}
 	err = db.Save(&comment).Error
 	id = comment.ID
+	DelCommentCache(int(pid))
 	return
 }
 
@@ -195,6 +203,7 @@ func DeleteByReport(report structs.Report) (err error) {
 		err = db.Where("id = ?", report.CommentID).Delete(&structs.Comment{}).Error
 		if err == nil {
 			err = db.Model(&structs.Post{}).Where("id = ?", report.PostID).Update("reply_num", gorm.Expr("reply_num - 1")).Error
+			DelCommentCache(int(report.PostID))
 		}
 	} else {
 		err = db.Where("id = ?", report.PostID).Delete(&structs.Post{}).Error
@@ -223,6 +232,7 @@ func SetTagByReport(report structs.Report) (err error) {
 		err = db.Model(&structs.Comment{}).Where("id = ?", report.CommentID).Update("tag", report.Reason).Error
 		if err == nil {
 			err = db.Model(&structs.Post{}).Where("id = ?", report.PostID).Update("updated_at", time.Now()).Error
+			DelCommentCache(int(report.PostID))
 		}
 	} else {
 		err = db.Model(&structs.Post{}).Where("id = ?", report.PostID).Update("tag", report.Reason).Error
