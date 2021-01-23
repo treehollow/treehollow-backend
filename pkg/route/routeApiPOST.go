@@ -2,6 +2,7 @@ package route
 
 import (
 	"bytes"
+	"context"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
 	"log"
@@ -16,6 +17,7 @@ import (
 	"thuhole-go-backend/pkg/s3"
 	"thuhole-go-backend/pkg/structs"
 	"thuhole-go-backend/pkg/utils"
+	"time"
 )
 
 func generateTag(text string) string {
@@ -47,6 +49,8 @@ func sendPost(c *gin.Context) {
 	var imgPath string
 	var uploadChan chan bool
 	uploadChan = nil
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	if typ == "image" {
 		imgPath = utils.GenToken()
 		sDec, suffix, err2 := utils.SaveImage(img, imgPath)
@@ -63,7 +67,13 @@ func sendPost(c *gin.Context) {
 				if err4 != nil {
 					log.Printf("S3 upload failed, err=%s\n", err4)
 				}
-				uploadChan <- true
+
+				select {
+				default:
+					uploadChan <- true
+				case <-ctx.Done():
+					return
+				}
 			}()
 		}
 	} else {
@@ -77,7 +87,12 @@ func sendPost(c *gin.Context) {
 	} else {
 		if uploadChan != nil {
 			//wait until upload complete.
-			<-uploadChan
+			select {
+			case <-uploadChan:
+
+			case <-time.After(15 * time.Second):
+				log.Println("image upload timeout")
+			}
 		}
 
 		c.JSON(http.StatusOK, gin.H{
@@ -125,6 +140,8 @@ func sendComment(c *gin.Context) {
 	var imgPath string
 	var uploadChan chan bool
 	uploadChan = nil
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	if typ == "image" {
 		imgPath = utils.GenToken()
 		sDec, suffix, err2 := utils.SaveImage(img, imgPath)
@@ -142,7 +159,13 @@ func sendComment(c *gin.Context) {
 				if err4 != nil {
 					log.Printf("S3 upload failed, err=%s\n", err4)
 				}
-				uploadChan <- true
+
+				select {
+				default:
+					uploadChan <- true
+				case <-ctx.Done():
+					return
+				}
 			}()
 		}
 	} else {
@@ -165,7 +188,12 @@ func sendComment(c *gin.Context) {
 
 		if uploadChan != nil {
 			//wait until upload complete.
-			<-uploadChan
+			select {
+			case <-uploadChan:
+
+			case <-time.After(15 * time.Second):
+				log.Println("image upload timeout")
+			}
 		}
 
 		c.JSON(http.StatusOK, gin.H{
