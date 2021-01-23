@@ -232,7 +232,7 @@ func handleReport(c *gin.Context) {
 					Reason:    report.Reason,
 					Type:      structs.UserReportFold,
 				}).Count(&reportScore).Error
-				if reportScore == 3 && err == nil {
+				if reportScore == 2 && err == nil {
 					err = db.SetTagByReport(report)
 				}
 			}
