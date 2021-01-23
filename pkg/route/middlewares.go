@@ -164,13 +164,16 @@ func disallowBannedPostUsers() gin.HandlerFunc {
 		user := c.MustGet("user").(structs.User)
 		if !permissions.CanOverrideBan(&user) {
 			timestamp := utils.GetTimeStamp()
-			var ban structs.Ban
-			err := db.GetDb(false).Model(&structs.Ban{}).Where("user_id = ? and expire_at > ?", user.ID, timestamp).
-				Order("expire_at desc").First(&ban).Error
-			if err == nil {
-				utils.HttpReturnWithCodeOneAndAbort(c, "很抱歉，您当前处于禁言状态，在"+
-					utils.TimestampToString(ban.ExpireAt)+"之前您将无法发布树洞。")
-				return
+			bannedTimes, err := db.GetBannedTime(user.ID, timestamp)
+			if bannedTimes > 0 && err != nil {
+				var ban structs.Ban
+				err2 := db.GetDb(false).Model(&structs.Ban{}).Where("user_id = ? and expire_at > ?", user.ID, timestamp).
+					Order("expire_at desc").First(&ban).Error
+				if err2 == nil {
+					utils.HttpReturnWithCodeOneAndAbort(c, "很抱歉，您当前处于禁言状态，在"+
+						utils.TimestampToString(ban.ExpireAt)+"之前您将无法发布树洞。")
+					return
+				}
 			}
 		}
 		c.Next()

@@ -165,8 +165,8 @@ func GenCommenterName(dzUserID int32, czUserID int32, postID int32, names0 []str
 	return name, nil
 }
 
-func getBannedTime(uid int32) (times int64, err error) {
-	err = db.Model(&structs.Ban{}).Where("user_id = ? and expire_at > ?", uid, utils.GetTimeStamp()).Count(&times).Error
+func GetBannedTime(uid int32, startTime int64) (times int64, err error) {
+	err = db.Model(&structs.Ban{}).Where("user_id = ? and expire_at > ?", uid, startTime).Count(&times).Error
 	return
 }
 
@@ -205,7 +205,7 @@ func DeleteByReport(report structs.Report) (err error) {
 func DeleteAndBan(report structs.Report, text string) (err error) {
 	err = DeleteByReport(report)
 	if err == nil {
-		times, err := getBannedTime(report.ReportedUserID)
+		times, err := GetBannedTime(report.ReportedUserID, 0)
 		if err == nil {
 			db.Create(&structs.Ban{
 				UserID:   report.ReportedUserID,
