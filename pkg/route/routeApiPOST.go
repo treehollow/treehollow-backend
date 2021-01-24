@@ -284,11 +284,13 @@ func handleReport(c *gin.Context) {
 			_ = db.UnbanByReport(report)
 			if report.IsComment {
 				err = db.GetDb(false).Model(&structs.Comment{}).
-					Where("id = ?", report.CommentID).Update("deleted_at", nil).Error
+					Where("id = ?", report.CommentID).
+					Updates(map[string]interface{}{"deleted_at": nil, "report_num": 0}).Error
 				db.DelCommentCache(int(report.PostID))
 			} else {
 				err = db.GetDb(false).Model(&structs.Post{}).
-					Where("id = ?", report.PostID).Update("deleted_at", nil).Error
+					Where("id = ?", report.PostID).
+					Updates(map[string]interface{}{"deleted_at": nil, "report_num": 0}).Error
 			}
 		case structs.AdminUnban:
 			err = db.UnbanByReport(report)
