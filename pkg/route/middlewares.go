@@ -164,7 +164,7 @@ func disallowBannedPostUsers() gin.HandlerFunc {
 		if !permissions.CanOverrideBan(&user) {
 			timestamp := utils.GetTimeStamp()
 			bannedTimes, err := db.GetBannedTime(user.ID, timestamp)
-			if bannedTimes > 0 && err != nil {
+			if bannedTimes > 0 && err == nil {
 				var ban structs.Ban
 				err2 := db.GetDb(false).Model(&structs.Ban{}).Where("user_id = ? and expire_at > ?", user.ID, timestamp).
 					Order("expire_at desc").First(&ban).Error
