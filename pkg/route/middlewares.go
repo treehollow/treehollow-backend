@@ -3,6 +3,7 @@ package route
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/shirou/gopsutil/v3/load"
 	"github.com/spf13/viper"
 	"github.com/ulule/limiter/v3"
 	"log"
@@ -156,6 +157,19 @@ func httpReturnInfo(c *gin.Context, text string) {
 		"count": 1,
 	})
 	c.Abort()
+}
+
+func sysLoadWarningMiddleware(threshold float64, msg string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		avg, err := load.Avg()
+		if err == nil {
+			if avg.Load1 > threshold {
+				utils.HttpReturnWithCodeOneAndAbort(c, msg)
+				return
+			}
+		}
+		c.Next()
+	}
 }
 
 func disallowBannedPostUsers() gin.HandlerFunc {

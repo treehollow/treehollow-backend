@@ -41,6 +41,7 @@ func ServicesApiListenHttp() {
 		adminStatisticsCommand(),
 		adminSysMsgsCommand(),
 		adminShutdownCommand(),
+		sysLoadWarningMiddleware(3.0, "目前树洞服务器负载较高，搜索功能已被暂时停用"),
 		searchPost)
 	r.GET("/contents/post/attentions",
 		disallowUnregisteredUsers(),
