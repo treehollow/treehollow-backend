@@ -106,6 +106,11 @@ func CanShowHelp(user *structs.User) bool {
 		user.Role == structs.SuperUserRole
 }
 
+func CanOverrideSysLoadLimit(user *structs.User) bool {
+	return user.Role == structs.AdminRole || isDeleter(user.Role) || user.Role == structs.UnDeleterRole ||
+		user.Role == structs.SuperUserRole
+}
+
 func CanShutdown(user *structs.User) bool {
 	return user.Role == structs.SuperUserRole
 }

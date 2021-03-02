@@ -161,11 +161,14 @@ func httpReturnInfo(c *gin.Context, text string) {
 
 func sysLoadWarningMiddleware(threshold float64, msg string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		avg, err := load.Avg()
-		if err == nil {
-			if avg.Load1 > threshold {
-				utils.HttpReturnWithCodeOneAndAbort(c, msg)
-				return
+		user := c.MustGet("user").(structs.User)
+		if !permissions.CanOverrideSysLoadLimit(&user) {
+			avg, err := load.Avg()
+			if err == nil {
+				if avg.Load1 > threshold {
+					utils.HttpReturnWithCodeOneAndAbort(c, msg)
+					return
+				}
 			}
 		}
 		c.Next()
