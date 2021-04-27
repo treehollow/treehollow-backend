@@ -1,9 +1,0 @@
-language: go
-go:
-  - 1.13.x
-
-script:
-  - go test ./pkg/...
-  - go build -o treehole-fallback ./cmd/treehole-fallback/main.go
-  - go build -o treehole-login-api ./cmd/treehole-login-api/main.go
-  - go build -o treehole-services-api ./cmd/treehole-services-api/main.go
