@@ -5,7 +5,7 @@
 name: T大树洞
 
 ### 联系邮箱
-contact_email: thuhole@protonmail.com
+contact_email: contact@thuhole.com
 
 ### 检查邮箱是否合法的正则表达式。可参见https://html.spec.whatwg.org/multipage/input.html#valid-e-mail-address
 email_check_regex: ^[a-zA-Z]+[-]*[a-zA-Z]*[0-9]*@(mails\.tsinghua\.edu\.cn)$
@@ -13,32 +13,38 @@ email_check_regex: ^[a-zA-Z]+[-]*[a-zA-Z]*[0-9]*@(mails\.tsinghua\.edu\.cn)$
 ### 图床域名。注意以"/"结尾
 img_base_url: https://img.thuhole.com/
 
-### 图片文件存储文件夹。这个文件夹中的内容需要可以通过图床域名访问到。注意没有"/"结尾
+### 图片文件存储文件夹。
 images_path: /path/to/images/folder
 
 ### 是否是debug模式
 is_debug: true
 
-### 当is_debug=false时，用户邮箱在数据库中会通过一个盐被单向加密。
-### 为了安全，这个盐的明文不会存储到硬盘上，而是每次启动树洞登录服务程序时需要手动输入，这里需要填写盐的sha256哈希以避免输错。
-### 获取sha256的方法：https://thuhole.github.io/online-tools/sha256.html
-salt_hashed: d83f8dd178b6db458f6a2b5782a5758dd4250550e7f73bcd4ac963bebf967939
+### 用户邮箱在数据库中会通过一个盐被单向加密。
+salt: CHANGE_ME!
 
-### 树洞内容服务的监听端口和登录服务的监听端口。这两个端口和程序分开的。
-login_api_listen_address: 127.0.0.1:8080
-services_api_listen_address: 127.0.0.1:8081
+### 树洞内容服务的监听端口和登录服务的监听端口(或unix socket)。这两个端口和程序分开的。
+security_api_listen_address: /tmp/treehollow/treehollow-security-api.sock
+services_api_listen_address: /tmp/treehollow/treehollow-services-api.sock
+push_api_listen_address: /tmp/treehollow/treehollow-push-api.sock
 
 ### Google reCAPTCHA v3密钥。需要前往reCAPTCHA官网获取。https://developers.google.com/recaptcha/docs/v3
-recaptcha_private_key: YOUR_v3_KEY
+recaptcha_v3_private_key: YOUR_v3_KEY
 ### Google reCAPTCHA v2密钥。reCAPTCHA v3不通过时，
 ### 会使用v2的基于图片的人机识别验证。需要前往reCAPTCHA官网获取。https://developers.google.com/recaptcha/docs/display
 recaptcha_v2_private_key: YOUR_v2_KEY
 
 ### redis服务配置
-redis_source: redis://localhost:6379/0
+# Tcp connection:
+# 		redis://<user>:<password>@<host>:<port>/<db_number>
+# Unix connection:
+#		unix://<user>:<password>@</path/to/redis.sock>?db=<db_number>
+redis_source: unix:///var/run/redis/redis.sock?db=0
 
 ### MySQL服务配置
-sql_source: USER:PASSWORD@tcp(localhost:3306)/DB_NAME
+# see https://pear.php.net/manual/en/package.database.db.intro-dsn.php for detail
+# e.g. user@unix(/path/to/socket)/pear
+# e.g. user:pass@tcp(localhost:5555)/pear
+sql_source: USER:PASSWORD@unix(/var/lib/mysql/mysql.sock)/DB_NAME
 
 ### SMTP配置
 smtp_host: smtp.thuhole.com
@@ -46,7 +52,18 @@ smtp_password: YOUR_PASSWORD
 smtp_username: noreply@thuhole.com
 smtp_port: 465
 
-
+### 最少解密所需人数
+min_decryption_key_count: 3
+### 密钥保管员的PGP密钥列表
+# 注意：必须使用\n转义
+key_keepers_pgp_public_keys: [
+    "-----BEGIN PGP PUBLIC KEY BLOCK-----\n\n...\n-----END PGP PUBLIC KEY BLOCK-----",
+    "-----BEGIN PGP PUBLIC KEY BLOCK-----\n\n...\n-----END PGP PUBLIC KEY BLOCK-----",
+    "-----BEGIN PGP PUBLIC KEY BLOCK-----\n\n...\n-----END PGP PUBLIC KEY BLOCK-----",
+    "-----BEGIN PGP PUBLIC KEY BLOCK-----\n\n...\n-----END PGP PUBLIC KEY BLOCK-----",
+    "-----BEGIN PGP PUBLIC KEY BLOCK-----\n\n...\n-----END PGP PUBLIC KEY BLOCK-----",
+    "-----BEGIN PGP PUBLIC KEY BLOCK-----\n\n...\n-----END PGP PUBLIC KEY BLOCK-----"
+]
 
 
 
@@ -64,12 +81,8 @@ allowed_register_countries:
   - 中国
 
 ### 公告
+### TODO: (low priority)this announcement is not synchronous with config.txt of app
 announcement: This is dev server.
-
-### 永久封禁的用户邮箱哈希值列表。这些哈希值对应的邮箱无法注册。
-banned_email_hashes:
-  - d83f8dd178b6db458f6a2b5782a5758dd4250550e7f73bcd4ac963bebf967939
-  - d83f8dd178b6db458f6a2b5782a5758dd4250550e7f73bcd4ac963bebf967938
 
 ### 图床CDN配置。这里使用了Dogecloud CDN(https://www.dogecloud.com/)。
 dcaccesskey: ""
@@ -88,15 +101,20 @@ fold_regex: ([A-Za-z0-9+/]{100})|(BEGIN PUBLIC KEY)
 ### "性相关"折叠检测的正则表达式
 sex_related_regex: (porn(.*)hub|杜蕾斯)
 ### 折叠tag列表
-fold_tags:
+reportable_tags:
   - 性相关
   - 政治相关
-  - 折叠
   - NSFW
   - 刷屏
-  - 真实性可疑
-  - 举报较多
   - 重复内容
+  - 引战
+  - 未经证实的传闻
+  - 令人不适
+sendable_tags:
+  - 性相关
+  - 政治相关
+  - NSFW
+  - 刷屏
   - 引战
   - 未经证实的传闻
   - 令人不适
@@ -124,3 +142,21 @@ fallback_announcement: 系统正在维护升级，请稍后重试...
 
 ### 服务宕机时的错误提示程序监听端口
 fallback_listen_address: 127.0.0.1:8082
+
+### iOS apn2 push settings
+ios_push_auth_file: ./file.p12
+ios_push_auth_password: password
+
+### OR
+#ios_push_auth_file: ./file.p8
+#ios_push_key_id: 123
+#ios_push_team_id: 123
+
+### Only need to edit this config when [push service] and [other services] are at different servers
+push_internal_api_listen_address: 127.0.0.1:3009
+
+### 除了邮箱正则表达式之外，额外允许注册的邮箱白名单
+email_whitelist: []
+
+### 允许/help等管理员命令
+allow_admin_commands: true

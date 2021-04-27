@@ -1,19 +1,25 @@
 package utils
 
 import (
+	"bytes"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base32"
 	"encoding/base64"
 	"encoding/hex"
-	"errors"
+	"encoding/json"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/oschwald/geoip2-golang"
+	"github.com/ProtonMail/gopenpgp/v2/crypto"
+	"github.com/google/uuid"
+	errors2 "github.com/pkg/errors"
 	"github.com/sigurn/crc8"
 	"github.com/spf13/viper"
+	"gorm.io/gorm"
+	"image"
+	_ "image/gif"
+	_ "image/jpeg"
+	_ "image/png"
 	"io/ioutil"
-	"log"
 	"math/big"
 	"net"
 	"net/http"
@@ -22,12 +28,12 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"thuhole-go-backend/pkg/consts"
 	"time"
+	"treehollow-v3-backend/pkg/consts"
+	"treehollow-v3-backend/pkg/logger"
 )
 
 var AllowedSubnets []*net.IPNet
-var GeoDb *geoip2.Reader
 var Salt string
 
 func GenCode() string {
@@ -48,14 +54,18 @@ func GenToken() string {
 	return strings.ToLower(base32.StdEncoding.EncodeToString(randomBytes))
 }
 
-func Hash1(user string) string {
+func GenNonce() string {
+	return uuid.New().String()
+}
+
+func SHA256(user string) string {
 	h := sha256.New()
 	h.Write([]byte(user))
 	return hex.EncodeToString(h.Sum(nil))
 }
 
 func HashEmail(user string) string {
-	return Hash1(Salt + Hash1(strings.ToLower(user)))
+	return SHA256(Salt + SHA256(strings.ToLower(user)))
 }
 
 func GetTimeStamp() int64 {
@@ -119,16 +129,25 @@ func CheckEmail(email string) bool {
 	return emailRegexp.MatchString(email)
 }
 
-func HttpReturnWithCodeOne(c *gin.Context, msg string) {
-	c.JSON(http.StatusOK, gin.H{
-		"code": 1,
-		"msg":  msg,
-	})
-}
+func CreatePublicKeyRing(publicKey string) (*crypto.KeyRing, error) {
+	publicKeyObj, err := crypto.NewKeyFromArmored(publicKey)
+	if err != nil {
+		return nil, errors2.Wrap(err, "gopenpgp: unable to parse public key")
+	}
 
-func HttpReturnWithCodeOneAndAbort(c *gin.Context, msg string) {
-	HttpReturnWithCodeOne(c, msg)
-	c.Abort()
+	if publicKeyObj.IsPrivate() {
+		publicKeyObj, err = publicKeyObj.ToPublic()
+		if err != nil {
+			return nil, errors2.Wrap(err, "gopenpgp: unable to extract public key from private key")
+		}
+	}
+
+	publicKeyRing, err := crypto.NewKeyRing(publicKeyObj)
+	if err != nil {
+		return nil, errors2.Wrap(err, "gopenpgp: unable to create new keyring")
+	}
+
+	return publicKeyRing, nil
 }
 
 func IsInAllowedSubnet(ip string) bool {
@@ -147,19 +166,33 @@ func GetHashedFilePath(filePath string) string {
 	return filePath
 }
 
-func SaveImage(base64img string, imgPath string) ([]byte, string, error) {
+func SaveImage(base64img string, imgPath string) ([]byte, string, string, *logger.InternalError) {
 	var suffix string
 	sDec, err2 := base64.StdEncoding.DecodeString(base64img)
 	if err2 != nil {
-		return nil, "", errors.New("图片数据不合法")
+		return nil, "", "{}", logger.NewSimpleError("InvalidImgBase64", "图片数据不合法", logger.WARN)
 	}
 	fileType := http.DetectContentType(sDec)
-	if fileType != "image/jpeg" && fileType != "image/jpg" && fileType != "image/png" {
-		return nil, "", errors.New("图片数据不合法")
+	if fileType != "image/jpeg" && fileType != "image/jpg" && fileType != "image/png" && fileType != "image/gif" {
+		return nil, "", "{}", logger.NewSimpleError("InvalidImgType", "图片数据不合法", logger.WARN)
+	}
+
+	im, _, err := image.DecodeConfig(bytes.NewReader(sDec))
+	if err != nil {
+		return nil, "", "{}", logger.NewError(err, "ImageDecodeFailed", "图片解析失败")
+	}
+	if im.Width > consts.ImageMaxWidth || im.Height > consts.ImageMaxHeight {
+		return nil, "", "{}", logger.NewSimpleError("TooLargeImg", "图片过大", logger.WARN)
+	}
+	metadataBytes, err := json.Marshal(map[string]int{"w": im.Width, "h": im.Height})
+	if err != nil {
+		return nil, "", "{}", logger.NewError(err, "ImageSizeDecodeFailed", "图片大小解析失败")
 	}
 
 	if fileType == "image/png" {
 		suffix = ".png"
+	} else if fileType == "image/gif" {
+		suffix = ".gif"
 	} else {
 		suffix = ".jpeg"
 	}
@@ -168,10 +201,9 @@ func SaveImage(base64img string, imgPath string) ([]byte, string, error) {
 	_ = os.MkdirAll(hashedPath, os.ModePerm)
 	err3 := ioutil.WriteFile(filepath.Join(hashedPath, imgPath+suffix), sDec, 0644)
 	if err3 != nil {
-		log.Printf("error ioutil.WriteFile while saving image, err=%s\n", err3.Error())
-		return nil, suffix, errors.New("error while saving image")
+		return nil, suffix, string(metadataBytes), logger.NewError(err3, "ErrorSavingImage", "图片存储失败")
 	}
-	return sDec, suffix, nil
+	return sDec, suffix, string(metadataBytes), nil
 }
 
 func CalcExtra(str1 string, str2 string) int64 {
@@ -209,4 +241,15 @@ func TrimText(text string, maxLength int) string {
 		return string(runeStr[:maxLength]) + "..."
 	}
 	return text
+}
+
+func GetEarliestAuthenticationTime() time.Time {
+	return time.Now().AddDate(0, 0, -consts.TokenExpireDays)
+}
+
+func UnscopedTx(tx *gorm.DB, b bool) *gorm.DB {
+	if b {
+		return tx.Unscoped()
+	}
+	return tx
 }

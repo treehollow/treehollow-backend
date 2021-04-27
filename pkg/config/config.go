@@ -3,11 +3,11 @@ package config
 import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/gin-gonic/gin"
-	"github.com/oschwald/geoip2-golang"
 	"github.com/spf13/viper"
 	"log"
 	"net"
-	"thuhole-go-backend/pkg/utils"
+	"treehollow-v3-backend/pkg/consts"
+	"treehollow-v3-backend/pkg/utils"
 )
 
 func refreshAllowedSubnets() {
@@ -20,20 +20,13 @@ func refreshAllowedSubnets() {
 	log.Println("subnets: ", subnets)
 }
 
-func refreshGeoIpDb() {
-	var err error
-	utils.GeoDb, err = geoip2.Open(viper.GetString("mmdb_path"))
-	if err != nil {
-		utils.GeoDb = nil
-		log.Println("geoip2 db load failed. No IP location restrictions would be available.")
-	} else {
-		log.Println("geoip2 db loaded.")
-	}
-}
-
 func refreshConfig() {
 	refreshAllowedSubnets()
-	refreshGeoIpDb()
+	utils.RefreshGeoDb()
+	viper.SetDefault("sys_load_threshold", consts.SystemLoadThreshold)
+	viper.SetDefault("ws_ping_period_sec", 90)
+	viper.SetDefault("ws_pong_timeout_sec", 10)
+	viper.SetDefault("push_internal_api_listen_address", "127.0.0.1:3009")
 }
 
 func InitConfigFile() {
@@ -52,11 +45,7 @@ func InitConfigFile() {
 }
 
 func GetFrontendConfigInfo() gin.H {
-	// TODO: swap img_base_url if not in China
 	return gin.H{
-		"img_base_url":         viper.GetString("img_base_url"),
-		"img_base_url_bak":     viper.GetString("img_base_url_bak"),
-		"fold_tags":            viper.GetStringSlice("fold_tags"),
 		"web_frontend_version": viper.GetString("web_frontend_version"),
 		"announcement":         viper.GetString("announcement"),
 	}

@@ -61,7 +61,7 @@ func DogeCloudAPI(apiPath string, data map[string]interface{}, jsonMode bool) (r
 		return
 	} // 网络错误
 	defer resp.Body.Close()
-	r, err := ioutil.ReadAll(resp.Body)
+	r, _ := ioutil.ReadAll(resp.Body)
 
 	_ = json.Unmarshal(r, &ret)
 
