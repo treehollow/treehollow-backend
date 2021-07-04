@@ -51,6 +51,7 @@ type User struct {
 	//Devices        []Device
 	CreatedAt time.Time
 	UpdatedAt time.Time
+	DeletedAt gorm.DeletedAt `gorm:"index"`
 }
 
 type DecryptionKeyShares struct {
@@ -223,7 +224,7 @@ func (report *Report) ToString() string {
 	} else {
 		name = fmt.Sprintf("To:树洞#%d", report.PostID)
 	}
-	rtn = fmt.Sprintf("%s\n***\n Reason: %s", name, report.Reason)
+	rtn = fmt.Sprintf("%s\n***\nReason: %s", name, report.Reason)
 	return rtn
 }
 

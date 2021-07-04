@@ -12,6 +12,7 @@ import (
 	"gorm.io/gorm/clause"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 	"treehollow-v3-backend/pkg/base"
 	"treehollow-v3-backend/pkg/consts"
@@ -19,26 +20,6 @@ import (
 	"treehollow-v3-backend/pkg/mail"
 	"treehollow-v3-backend/pkg/utils"
 )
-
-func checkAccountRegistered(c *gin.Context) {
-	email := c.PostForm("email")
-	emailHash := utils.HashEmail(email)
-
-	var count int64
-	err := base.GetDb(false).Where("email_hash = ?", emailHash).
-		Model(&base.Email{}).Count(&count).Error
-	if err != nil {
-		base.HttpReturnWithCodeMinusOneAndAbort(c, logger.NewError(err, "CheckAccountRegisteredFailed", consts.DatabaseReadFailedString))
-		return
-	}
-	if count == 1 {
-		base.HttpReturnWithCodeMinusOneAndAbort(c, logger.NewSimpleError("AlreadyRegisteredError", "你已经注册过了！", logger.WARN))
-		return
-	}
-
-	c.Set("email_hash", emailHash)
-	c.Next()
-}
 
 func saveKeyShares(user *base.User, pwHashed string, tx *gorm.DB) *logger.InternalError {
 	pgpPublicKeys := viper.GetStringSlice("key_keepers_pgp_public_keys")
@@ -81,7 +62,7 @@ If you agree to decrypt this user's personal information, please submit the foll
 }
 
 func createDevice(c *gin.Context, user *base.User, pwHashed string, tx *gorm.DB) error {
-	email := c.PostForm("email")
+	email := strings.ToLower(c.PostForm("email"))
 	token := utils.GenToken()
 	deviceUUID := uuid.New().String()
 	deviceType := c.MustGet("device_type").(base.DeviceType)
@@ -146,7 +127,7 @@ func createDevice(c *gin.Context, user *base.User, pwHashed string, tx *gorm.DB)
 func createAccount(c *gin.Context) {
 	oldToken := c.PostForm("old_token")
 	emailHash := c.MustGet("email_hash").(string)
-	email := c.PostForm("email")
+	email := strings.ToLower(c.PostForm("email"))
 	pwHashed := c.PostForm("password_hashed")
 	emailEncrypted, err := utils.AESEncrypt(email, pwHashed)
 
@@ -219,7 +200,7 @@ func createAccount(c *gin.Context) {
 func changePassword(c *gin.Context) {
 	oldPwHashed := c.PostForm("old_password_hashed")
 	newPwHashed := c.PostForm("new_password_hashed")
-	email := c.PostForm("email")
+	email := strings.ToLower(c.PostForm("email"))
 
 	if len(email) > 100 || len(oldPwHashed) > 64 || len(newPwHashed) > 64 {
 		base.HttpReturnWithCodeMinusOneAndAbort(c, logger.NewSimpleError("ChangePasswordInvalidParam", "参数错误", logger.WARN))

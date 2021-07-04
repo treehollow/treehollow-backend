@@ -4,17 +4,20 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"log"
 	"net/http"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 	"treehollow-v3-backend/pkg/base"
+	"treehollow-v3-backend/pkg/bot"
 	"treehollow-v3-backend/pkg/consts"
 	"treehollow-v3-backend/pkg/logger"
 	"treehollow-v3-backend/pkg/model"
@@ -40,6 +43,16 @@ func generateTag(text string) string {
 	return ""
 }
 
+func containRiskWords(text string) (string, bool) {
+	riskWords := viper.GetStringSlice("risk_words")
+	for _, word := range riskWords {
+		if strings.Contains(text, word) {
+			return word, true
+		}
+	}
+	return "", false
+}
+
 func sendPost(c *gin.Context) {
 	text := c.PostForm("text")
 	typ := c.PostForm("type")
@@ -56,6 +69,7 @@ func sendPost(c *gin.Context) {
 	var pid int32
 	var err error
 	var imgPath string
+	var suffix2 string
 	var uploadChan chan bool
 	uploadChan = nil
 	ctx, cancel := context.WithCancel(context.Background())
@@ -63,6 +77,7 @@ func sendPost(c *gin.Context) {
 	if typ == "image" {
 		imgPath = utils.GenToken()
 		sDec, suffix, metaStr, err2 := utils.SaveImage(img, imgPath)
+		suffix2 = suffix
 		if err2 != nil {
 			base.HttpReturnWithCodeMinusOne(c, err2)
 			return
@@ -107,6 +122,17 @@ func sendPost(c *gin.Context) {
 			"code":    0,
 			"post_id": pid,
 		})
+
+		if word, b := containRiskWords(text); viper.GetBool("enable_telegram") && b {
+			fullImgPath := ""
+			if typ == "image" {
+				fullImgPath = filepath.Join(viper.GetString("images_path"), imgPath[:2], imgPath+suffix2)
+			}
+			bot.TgMessageChannel <- bot.TgMessage{
+				Text: fmt.Sprintf("New post contains risk word:'%s'\n#%d\n %s", word, pid, text), ImagePath: fullImgPath,
+			}
+		}
+
 		return
 	}
 }
@@ -130,6 +156,7 @@ func sendComment(c *gin.Context) {
 	var imgPath string
 	var uploadChan chan bool
 	var post base.Post
+	var suffix2 string
 	uploadChan = nil
 
 	var commentID int32
@@ -172,6 +199,7 @@ func sendComment(c *gin.Context) {
 		if typ == "image" {
 			imgPath = utils.GenToken()
 			sDec, suffix, metaStr, err3 := utils.SaveImage(img, imgPath)
+			suffix2 = suffix
 			if err3 != nil {
 				base.HttpReturnWithCodeMinusOne(c, err3)
 				return err3.Err
@@ -279,6 +307,16 @@ func sendComment(c *gin.Context) {
 			"code":       0,
 			"comment_id": commentID,
 		})
+
+		if word, b := containRiskWords(text); viper.GetBool("enable_telegram") && b {
+			fullImgPath := ""
+			if typ == "image" {
+				fullImgPath = filepath.Join(viper.GetString("images_path"), imgPath[:2], imgPath+suffix2)
+			}
+			bot.TgMessageChannel <- bot.TgMessage{
+				Text: fmt.Sprintf("New comment contains risk word:'%s'\n#%d-%d\n %s", word, pid, commentID, text), ImagePath: fullImgPath,
+			}
+		}
 	}
 }
 
@@ -390,6 +428,16 @@ func handleReport(isComment bool) gin.HandlerFunc {
 					IsComment:      true,
 					Weight:         base.GetReportWeight(&user),
 				}
+
+				if viper.GetBool("enable_telegram") {
+					fullImgPath := ""
+					if comment.Type == "image" {
+						fullImgPath = filepath.Join(viper.GetString("images_path"), comment.FilePath[:2], comment.FilePath)
+					}
+					bot.TgMessageChannel <- bot.TgMessage{
+						Text: fmt.Sprintf("New user report for comment #%d-%d\nReason: %s\n\nOriginal text:\n%s", comment.PostID, comment.ID, reason, comment.Text), ImagePath: fullImgPath,
+					}
+				}
 			} else {
 				report = base.Report{
 					UserID:         user.ID,
@@ -400,6 +448,16 @@ func handleReport(isComment bool) gin.HandlerFunc {
 					Type:           reportType,
 					IsComment:      false,
 					Weight:         base.GetReportWeight(&user),
+				}
+
+				if viper.GetBool("enable_telegram") {
+					fullImgPath := ""
+					if post.Type == "image" {
+						fullImgPath = filepath.Join(viper.GetString("images_path"), post.FilePath[:2], post.FilePath)
+					}
+					bot.TgMessageChannel <- bot.TgMessage{
+						Text: fmt.Sprintf("New user report for post #%d\nReason: %s\n\nOriginal text:\n%s", post.ID, reason, post.Text), ImagePath: fullImgPath,
+					}
 				}
 			}
 

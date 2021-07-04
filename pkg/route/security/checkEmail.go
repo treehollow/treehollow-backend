@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"regexp"
+	"strings"
 	"time"
 	"treehollow-v3-backend/pkg/base"
 	"treehollow-v3-backend/pkg/consts"
@@ -22,7 +23,7 @@ func checkEmailParamsCheckMiddleware(c *gin.Context) {
 	recaptchaVersion := c.PostForm("recaptcha_version")
 	recaptchaToken := c.PostForm("recaptcha_token")
 	oldToken := c.PostForm("old_token")
-	email := c.PostForm("email")
+	email := strings.ToLower(c.PostForm("email"))
 
 	if len(email) > 100 || len(oldToken) > 32 || len(recaptchaToken) > 2000 || len(recaptchaVersion) > 2 {
 		base.HttpReturnWithCodeMinusOneAndAbort(c, logger.NewSimpleError("CheckEmailParamsOutOfBound", "参数错误", logger.WARN))
@@ -34,7 +35,7 @@ func checkEmailParamsCheckMiddleware(c *gin.Context) {
 }
 
 func checkEmailRegexMiddleware(c *gin.Context) {
-	email := c.PostForm("email")
+	email := strings.ToLower(c.PostForm("email"))
 	emailCheck, err := regexp.Compile(viper.GetString("email_check_regex"))
 	if err != nil {
 		base.HttpReturnWithCodeMinusOneAndAbort(c, logger.NewError(err, "RegexError", "服务器配置错误，请联系管理员。"))
@@ -106,7 +107,7 @@ func checkEmailRateLimitVerificationCode(c *gin.Context) {
 func checkEmailReCaptchaValidationMiddleware(c *gin.Context) {
 	recaptchaVersion := c.PostForm("recaptcha_version")
 	recaptchaToken := c.PostForm("recaptcha_token")
-	email := c.PostForm("email")
+	email := strings.ToLower(c.PostForm("email"))
 
 	if len(c.PostForm("recaptcha_token")) < 1 {
 		c.JSON(http.StatusOK, gin.H{
@@ -162,13 +163,40 @@ func checkEmailReCaptchaValidationMiddleware(c *gin.Context) {
 }
 
 func checkEmail(c *gin.Context) {
-	email := c.PostForm("email")
+	email := strings.ToLower(c.PostForm("email"))
 
 	emailHash := c.MustGet("email_hash").(string)
 
 	code := utils.GenCode()
 
 	err := mail.SendValidationEmail(code, email)
+	if err != nil {
+		base.HttpReturnWithCodeMinusOne(c, logger.NewError(err, "SendEmailFailed"+email, "验证码邮件发送失败。"))
+		return
+	}
+
+	err = base.GetDb(false).Clauses(clause.OnConflict{
+		UpdateAll: true,
+	}).Create(&base.VerificationCode{Code: code, EmailHash: emailHash, FailedTimes: 0, UpdatedAt: time.Now()}).Error
+	if err != nil {
+		base.HttpReturnWithCodeMinusOne(c, logger.NewError(err, "SaveVerificationCodeFailed", consts.DatabaseWriteFailedString))
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code": 1,
+		"msg":  "验证码发送成功，5分钟内无法重复发送验证码。请记得查看垃圾邮件。",
+	})
+}
+
+func unregisterEmail(c *gin.Context) {
+	email := strings.ToLower(c.PostForm("email"))
+
+	emailHash := c.MustGet("email_hash").(string)
+
+	code := utils.GenCode()
+
+	err := mail.SendUnregisterValidationEmail(code, email)
 	if err != nil {
 		base.HttpReturnWithCodeMinusOne(c, logger.NewError(err, "SendEmailFailed"+email, "验证码邮件发送失败。"))
 		return

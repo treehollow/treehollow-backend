@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"treehollow-v3-backend/pkg/bot"
 	"treehollow-v3-backend/pkg/consts"
 	"treehollow-v3-backend/pkg/logger"
 	"treehollow-v3-backend/pkg/logger/ginLogger"
@@ -21,6 +22,7 @@ import (
 func ServicesApiListenHttp() {
 	r := gin.New()
 
+	bot.InitBot()
 	initLimiters()
 	shutdownCountDown = 2
 	c := cron.New()

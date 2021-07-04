@@ -10,6 +10,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 	"treehollow-v3-backend/pkg/base"
 	"treehollow-v3-backend/pkg/consts"
@@ -19,7 +20,7 @@ import (
 
 func loginGetUserMiddleware(c *gin.Context) {
 	pwHashed := c.PostForm("password_hashed")
-	email := c.PostForm("email")
+	email := strings.ToLower(c.PostForm("email"))
 
 	emailEncrypted, err := utils.AESEncrypt(email, pwHashed)
 	if err != nil {

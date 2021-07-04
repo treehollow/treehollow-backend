@@ -37,18 +37,30 @@ func ApiListenHttp() {
 		checkEmailRateLimitVerificationCode,
 		checkEmailReCaptchaValidationMiddleware,
 		checkEmail)
+	r.POST("/v3/security/login/check_email_unregister",
+		checkEmailParamsCheckMiddleware,
+		checkAccountIsRegistered,
+		checkEmailRateLimitVerificationCode,
+		checkEmailReCaptchaValidationMiddleware,
+		unregisterEmail)
 	r.POST("/v3/security/login/create_account",
 		loginParamsCheckMiddleware,
-		checkAccountRegistered,
+		checkAccountNotRegistered,
 		loginCheckIOSToken,
 		createAccount)
 	r.POST("/v3/security/login/login",
 		loginParamsCheckMiddleware,
+		checkAccountIsRegistered,
 		loginGetUserMiddleware,
 		loginCheckMaxDevices,
 		loginCheckIOSToken,
 		login)
-	r.POST("/v3/security/login/change_password", changePassword)
+	r.POST("/v3/security/login/change_password",
+		checkAccountIsRegistered,
+		changePassword)
+	r.POST("/v3/security/login/unregister",
+		checkAccountIsRegistered,
+		deleteAccount)
 	r.GET("/v3/security/devices/list", listDevices)
 	r.POST("/v3/security/devices/terminate", terminateDevice)
 	r.POST("/v3/security/logout", logout)

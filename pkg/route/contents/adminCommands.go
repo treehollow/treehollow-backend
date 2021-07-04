@@ -172,13 +172,38 @@ func adminStatisticsCommand() gin.HandlerFunc {
 		keywords := c.Query("keywords")
 		if base.CanViewStatistics(&user) && keywords == "stats" {
 			var count int64
-			err := base.GetDb(true).Model(&base.User{}).Where("email_encrypted != \"\"").Count(&count).Error
+			var count2 int64
+
 			info := ""
+			err := base.GetDb(true).Model(&base.User{}).Where("email_encrypted != \"\"").Count(&count).Error
 			if err != nil {
 				base.HttpReturnWithCodeMinusOneAndAbort(c, logger.NewError(err, "GetTotalUserFailed", consts.DatabaseReadFailedString))
 				return
 			}
-			info += "总注册人数：" + strconv.Itoa(int(count)) + "\n"
+			info += "总注册人数（包含已注销账户）：" + strconv.Itoa(int(count)) + "\n"
+
+			err = base.GetDb(true).Model(&base.Email{}).Count(&count).Error
+			if err != nil {
+				base.HttpReturnWithCodeMinusOneAndAbort(c, logger.NewError(err, "GetTotalRegisteredUserFailed", consts.DatabaseReadFailedString))
+				return
+			}
+			info += "总注册人数（不包含已注销账户）：" + strconv.Itoa(int(count)) + "\n"
+
+			err = base.GetDb(false).Model(&base.User{}).Where("email_encrypted != \"\"").Count(&count2).Error
+			if err != nil {
+				base.HttpReturnWithCodeMinusOneAndAbort(c, logger.NewError(err, "GetTotalRegisteredUser2Failed", consts.DatabaseReadFailedString))
+				return
+			}
+			if count != count2 {
+				info += "警告：数据库邮箱验证系统自洽性检验失败，请修复！（" + strconv.Itoa(int(count2)) + "）\n"
+			}
+
+			err = base.GetDb(true).Model(&base.User{}).Count(&count).Error
+			if err != nil {
+				base.HttpReturnWithCodeMinusOneAndAbort(c, logger.NewError(err, "GetTotalNewOldUserFailed", consts.DatabaseReadFailedString))
+				return
+			}
+			info += "总注册人数（包含老版本树洞账户）：" + strconv.Itoa(int(count)) + "\n"
 
 			err = base.GetDb(true).Model(&base.Post{}).
 				Where("created_at > ?", time.Now().AddDate(0, 0, -1)).
@@ -196,7 +221,16 @@ func adminStatisticsCommand() gin.HandlerFunc {
 				base.HttpReturnWithCodeMinusOneAndAbort(c, logger.NewError(err, "GetDeletedPostStatsFailed", consts.DatabaseReadFailedString))
 				return
 			}
-			info += "24h内删帖数：" + strconv.Itoa(int(count)) + "\n"
+			info += "24h内树洞删帖数：" + strconv.Itoa(int(count)) + "\n"
+
+			err = base.GetDb(true).Model(&base.Comment{}).
+				Where("deleted_at is not null and created_at > ?", time.Now().AddDate(0, 0, -1)).
+				Count(&count).Error
+			if err != nil {
+				base.HttpReturnWithCodeMinusOneAndAbort(c, logger.NewError(err, "GetDeletedCommentStatsFailed", consts.DatabaseReadFailedString))
+				return
+			}
+			info += "24h内评论删帖数：" + strconv.Itoa(int(count)) + "\n"
 
 			httpReturnInfo(c, info)
 			return
