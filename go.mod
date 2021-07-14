@@ -46,6 +46,7 @@ require (
 	gopkg.in/ezzarghili/recaptcha-go.v4 v4.3.0
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/ini.v1 v1.62.0 // indirect
+	gopkg.in/tucnak/telebot.v2 v2.3.5 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gorm.io/driver/mysql v1.0.4
 	gorm.io/gorm v1.20.12
